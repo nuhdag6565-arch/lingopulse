@@ -1,4 +1,4 @@
-# LinguaAI — Yapay Zeka Destekli Dil Öğrenme Uygulaması
+# LingoPulse — Yapay Zeka Destekli Dil Öğrenme Uygulaması
 
 > Mobil Öncelikli (Mobile-First) MVP | FastAPI + MongoDB + React Native (Expo)
 
