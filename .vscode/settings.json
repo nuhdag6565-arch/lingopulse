@@ -1,0 +1,100 @@
+{
+  // ── Editör Genel ──────────────────────────────────────────────────
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.tabSize": 2,
+  "editor.rulers": [100],
+  "editor.suggestSelection": "first",
+  "editor.inlineSuggest.enabled": true,
+  "files.eol": "\n",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+
+  // ── Python / Backend ──────────────────────────────────────────────
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.tabSize": 4,
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": true,
+  "python.terminal.activateEnvironment": true,
+  "ruff.enable": true,
+  "ruff.lint.enable": true,
+
+  // ── TypeScript / React Native ──────────────────────────────────────
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "typescript.updateImportsOnFileMove.enabled": "always",
+
+  // ── Prettier ──────────────────────────────────────────────────────
+  "prettier.singleQuote": true,
+  "prettier.semi": true,
+  "prettier.trailingComma": "all",
+  "prettier.printWidth": 100,
+  "prettier.arrowParens": "always",
+
+  // ── ESLint ────────────────────────────────────────────────────────
+  "eslint.validate": ["javascript", "typescript", "typescriptreact"],
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+
+  // ── React Native / Expo ───────────────────────────────────────────
+  "reactNativeTools.projectRoot": "${workspaceFolder}/mobile_app",
+  "expo.globalBundle": true,
+
+  // ── MongoDB ───────────────────────────────────────────────────────
+  "mdb.connectionSaving.hideOptionToChooseWhereToSaveNewConnections": false,
+
+  // ── Docker ────────────────────────────────────────────────────────
+  "docker.showStartPage": false,
+
+  // ── Test Gezgini ──────────────────────────────────────────────────
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["backend/tests"],
+  "python.testing.cwd": "${workspaceFolder}",
+
+  // ── Dosya Hariç Tutma ─────────────────────────────────────────────
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/.pytest_cache": true,
+    "**/.mypy_cache": true,
+    "**/.ruff_cache": true,
+    "**/node_modules": true,
+    "**/.expo": true,
+    "**/dist": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.venv": true,
+    "**/dist": true
+  },
+
+  // ── Git ───────────────────────────────────────────────────────────
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "gitlens.hovers.currentLine.over": "line",
+
+  // ── İkon Teması ───────────────────────────────────────────────────
+  "workbench.iconTheme": "material-icon-theme"
+}

@@ -1,0 +1,34 @@
+{
+  "recommendations": [
+    // ── Python / Backend ──────────────────────────────
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.debugpy",
+    "charliermarsh.ruff",
+
+    // ── React Native / TypeScript ─────────────────────
+    "msjsdiag.vscode-react-native",
+    "expo.vscode-expo-tools",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+
+    // ── Veritabanı ────────────────────────────────────
+    "mongodb.mongodb-vscode",
+
+    // ── Docker / DevOps ───────────────────────────────
+    "ms-azuretools.vscode-docker",
+
+    // ── Git ───────────────────────────────────────────
+    "eamodio.gitlens",
+    "github.vscode-pull-request-github",
+
+    // ── API Test ──────────────────────────────────────
+    "rangav.vscode-thunder-client",
+
+    // ── Genel Geliştirici Araçları ────────────────────
+    "usernamehw.errorlens",
+    "streetsidesoftware.code-spell-checker",
+    "pkief.material-icon-theme",
+    "oderwat.indent-rainbow"
+  ]
+}

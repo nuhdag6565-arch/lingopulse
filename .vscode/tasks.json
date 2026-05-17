@@ -1,0 +1,150 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    // ═══════════════════════════════════════════════════════
+    //  BACKEND
+    // ═══════════════════════════════════════════════════════
+    {
+      "label": "Backend: Sanal Ortam Kur",
+      "type": "shell",
+      "command": "python -m venv .venv && .venv\\Scripts\\pip install -r requirements.txt && .venv\\Scripts\\pip install -r requirements-dev.txt",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Backend: API Başlat (uvicorn --reload)",
+      "type": "shell",
+      "command": ".venv\\Scripts\\uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
+      "options": {
+        "cwd": "${workspaceFolder}/backend",
+        "env": { "PYTHONPATH": "${workspaceFolder}/backend" }
+      },
+      "group": "test",
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": { "regexp": "^.*$", "message": 1 },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Started reloader process",
+          "endsPattern": "Application startup complete"
+        }
+      },
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Backend: Testleri Çalıştır",
+      "type": "shell",
+      "command": ".venv\\Scripts\\pytest -v --tb=short",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "group": { "kind": "test", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Backend: Lint (ruff check)",
+      "type": "shell",
+      "command": ".venv\\Scripts\\ruff check . --fix",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "Backend: Type Check (mypy)",
+      "type": "shell",
+      "command": ".venv\\Scripts\\mypy app --ignore-missing-imports",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "Backend: DB Seed (Örnek Kelimeler)",
+      "type": "shell",
+      "command": ".venv\\Scripts\\python ..\\scripts\\seed_db.py",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+
+    // ═══════════════════════════════════════════════════════
+    //  MOBILE
+    // ═══════════════════════════════════════════════════════
+    {
+      "label": "Mobile: npm install",
+      "type": "shell",
+      "command": "npm install",
+      "options": { "cwd": "${workspaceFolder}/mobile_app" },
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Mobile: Expo Start",
+      "type": "shell",
+      "command": "npx expo start",
+      "options": { "cwd": "${workspaceFolder}/mobile_app" },
+      "group": "test",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Mobile: Expo Android",
+      "type": "shell",
+      "command": "npx expo start --android",
+      "options": { "cwd": "${workspaceFolder}/mobile_app" },
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Mobile: Expo iOS",
+      "type": "shell",
+      "command": "npx expo start --ios",
+      "options": { "cwd": "${workspaceFolder}/mobile_app" },
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Mobile: TypeScript Kontrol",
+      "type": "shell",
+      "command": "npx tsc --noEmit",
+      "options": { "cwd": "${workspaceFolder}/mobile_app" },
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "Mobile: Lint (ESLint)",
+      "type": "shell",
+      "command": "npx eslint src --ext .ts,.tsx --fix",
+      "options": { "cwd": "${workspaceFolder}/mobile_app" },
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+
+    // ═══════════════════════════════════════════════════════
+    //  DOCKER
+    // ═══════════════════════════════════════════════════════
+    {
+      "label": "Docker: MongoDB Başlat",
+      "type": "shell",
+      "command": "docker-compose up -d mongodb",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "Docker: Full Stack Başlat",
+      "type": "shell",
+      "command": "docker-compose up -d",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Docker: Durdur",
+      "type": "shell",
+      "command": "docker-compose down",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared" }
+    }
+  ]
+}

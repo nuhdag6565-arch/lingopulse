@@ -54,7 +54,8 @@ mobile_app/android/build/
 !debug.keystore
 
 # IDE
-.vscode/
+# .vscode/ paylaşılıyor — settings, extensions, launch, tasks ekip için gerekli
+.vscode/*.code-snippets
 .idea/
 *.swp
 *.swo
