@@ -1,25 +1,50 @@
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { TouchableOpacity, StyleSheet, ActivityIndicator, Text } from 'react-native';
 import * as Speech from 'expo-speech';
 
 interface Props {
   text: string;
-  label?: string;
+  language?: string;
+  size?: number;
 }
 
-export const TTSButton: React.FC<Props> = ({ text, label = 'Seslendir' }) => {
+export const TTSButton: React.FC<Props> = ({ text, language = 'en-US', size = 22 }) => {
+  const [speaking, setSpeaking] = useState(false);
+
   const speak = () => {
-    Speech.speak(text, { language: 'en-US', rate: 0.85 });
+    if (speaking) {
+      Speech.stop();
+      setSpeaking(false);
+      return;
+    }
+    setSpeaking(true);
+    Speech.speak(text, {
+      language,
+      rate: 0.82,
+      onDone: () => setSpeaking(false),
+      onError: () => setSpeaking(false),
+    });
   };
 
   return (
-    <TouchableOpacity style={styles.btn} onPress={speak}>
-      <Text style={styles.label}>🔊 {label}</Text>
+    <TouchableOpacity
+      style={[styles.btn, { width: size * 2, height: size * 2 }]}
+      onPress={speak}
+      activeOpacity={0.7}
+    >
+      {speaking
+        ? <ActivityIndicator size="small" color="#4F46E5" />
+        : <Text style={{ fontSize: size - 2 }}>🔊</Text>
+      }
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
-  btn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, backgroundColor: '#EEF2FF' },
-  label: { color: '#4F46E5', fontSize: 13, fontWeight: '500' },
+  btn: {
+    borderRadius: 999,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

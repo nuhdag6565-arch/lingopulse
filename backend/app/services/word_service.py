@@ -1,4 +1,4 @@
-"""Orchestrates word creation, AI enrichment, and review processing."""
+"""Kelime oluşturma, AI zenginleştirme ve tekrar işlemlerini orkestre eder."""
 
 from datetime import datetime, timezone
 
@@ -16,9 +16,10 @@ class WordService:
         self.word_repo = WordRepository()
         self.review_repo = ReviewRepository()
 
-    async def create_word(self, data: WordCreate) -> Word:
+    async def create_word(self, user_id: str, data: WordCreate) -> Word:
         example = await generate_example(data.word, data.meaning)
         word = Word(
+            user_id=user_id,
             word=data.word,
             meaning=data.meaning,
             example_sentence=example.sentence,
@@ -26,9 +27,9 @@ class WordService:
         )
         return await self.word_repo.save(word)
 
-    async def update_word(self, word_id: str, data: WordUpdate) -> Word | None:
+    async def update_word(self, user_id: str, word_id: str, data: WordUpdate) -> Word | None:
         word = await self.word_repo.get_by_id(word_id)
-        if word is None:
+        if word is None or word.user_id != user_id:
             return None
         update_data = data.model_dump(exclude_none=True)
         for field, value in update_data.items():
@@ -36,16 +37,16 @@ class WordService:
         word.updated_at = datetime.now(timezone.utc)
         return await self.word_repo.save(word)
 
-    async def delete_word(self, word_id: str) -> bool:
+    async def delete_word(self, user_id: str, word_id: str) -> bool:
         word = await self.word_repo.get_by_id(word_id)
-        if word is None:
+        if word is None or word.user_id != user_id:
             return False
         await self.word_repo.delete(word)
         return True
 
-    async def submit_review(self, word_id: str, knew_it: bool) -> Review | None:
+    async def submit_review(self, user_id: str, word_id: str, knew_it: bool) -> Review | None:
         word = await self.word_repo.get_by_id(word_id)
-        if word is None:
+        if word is None or word.user_id != user_id:
             return None
 
         result = calculate_next_review(
@@ -71,12 +72,11 @@ class WordService:
         word.next_review_date = result.next_review_date
         word.updated_at = datetime.now(timezone.utc)
         await self.word_repo.save(word)
-
         return review
 
-    async def regenerate_example(self, word_id: str) -> Word | None:
+    async def regenerate_example(self, user_id: str, word_id: str) -> Word | None:
         word = await self.word_repo.get_by_id(word_id)
-        if word is None:
+        if word is None or word.user_id != user_id:
             return None
         example = await generate_example(word.word, word.meaning)
         word.example_sentence = example.sentence

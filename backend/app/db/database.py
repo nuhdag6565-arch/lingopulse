@@ -4,6 +4,7 @@ from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.core.config import get_settings
+from app.domain.models.user import User
 from app.domain.models.word import Word
 from app.domain.models.review import Review
 
@@ -18,7 +19,7 @@ async def connect_db() -> None:
     _client = AsyncIOMotorClient(settings.mongo_uri)
     await init_beanie(
         database=_client[settings.mongo_db],
-        document_models=[Word, Review],
+        document_models=[User, Word, Review],
     )
     logger.info("MongoDB connected: %s", settings.mongo_db)
 

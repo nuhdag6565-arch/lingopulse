@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     app_name: str = "LinguaAI"
     app_env: str = "development"
     debug: bool = True
-    secret_key: str = "change-me"
+    secret_key: str = "change-me-use-a-long-random-string-in-production"
 
     mongo_uri: str = "mongodb://localhost:27017/langlearn"
     mongo_db: str = "langlearn"

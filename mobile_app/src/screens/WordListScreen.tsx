@@ -2,13 +2,13 @@ import React from 'react';
 import { FlatList, View, Text, StyleSheet, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../navigation/types';
+import type { AppStackParamList } from '../navigation/types';
 import { WordCard } from '../components/word/WordCard';
 import { Loading } from '../components/common/Loading';
 import { Button } from '../components/common/Button';
 import { useWords } from '../hooks/useWords';
 
-type Nav = NativeStackNavigationProp<RootStackParamList, 'WordList'>;
+type Nav = NativeStackNavigationProp<AppStackParamList, 'WordList'>;
 
 export const WordListScreen: React.FC = () => {
   const nav = useNavigation<Nav>();

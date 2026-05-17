@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
-from app.api.v1.dependencies import get_word_service
+from app.api.v1.dependencies import get_current_user, get_word_service
+from app.core.rate_limit import limiter
+from app.domain.models.user import User
 from app.domain.schemas.word import WordCreate, WordListResponse, WordResponse, WordUpdate
 from app.services.word_service import WordService
 
@@ -28,22 +30,21 @@ async def list_words(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     svc: WordService = Depends(get_word_service),
+    user: User = Depends(get_current_user),
 ):
-    items, total = await svc.word_repo.list_all(page=page, size=size)
-    return WordListResponse(
-        items=[_to_response(w) for w in items],
-        total=total,
-        page=page,
-        size=size,
-    )
+    items, total = await svc.word_repo.list_all(user_id=str(user.id), page=page, size=size)
+    return WordListResponse(items=[_to_response(w) for w in items], total=total, page=page, size=size)
 
 
 @router.post("/", response_model=WordResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("20/minute")
 async def create_word(
+    request: Request,
     data: WordCreate,
     svc: WordService = Depends(get_word_service),
+    user: User = Depends(get_current_user),
 ):
-    word = await svc.create_word(data)
+    word = await svc.create_word(user_id=str(user.id), data=data)
     return _to_response(word)
 
 
@@ -51,8 +52,9 @@ async def create_word(
 async def get_due_words(
     limit: int = Query(20, ge=1, le=50),
     svc: WordService = Depends(get_word_service),
+    user: User = Depends(get_current_user),
 ):
-    items = await svc.word_repo.find_due(limit=limit)
+    items = await svc.word_repo.find_due(user_id=str(user.id), limit=limit)
     return [_to_response(w) for w in items]
 
 
@@ -60,10 +62,11 @@ async def get_due_words(
 async def get_word(
     word_id: str,
     svc: WordService = Depends(get_word_service),
+    user: User = Depends(get_current_user),
 ):
     word = await svc.word_repo.get_by_id(word_id)
-    if word is None:
-        raise HTTPException(status_code=404, detail="Word not found")
+    if word is None or word.user_id != str(user.id):
+        raise HTTPException(status_code=404, detail="Kelime bulunamadı")
     return _to_response(word)
 
 
@@ -72,10 +75,11 @@ async def update_word(
     word_id: str,
     data: WordUpdate,
     svc: WordService = Depends(get_word_service),
+    user: User = Depends(get_current_user),
 ):
-    word = await svc.update_word(word_id, data)
+    word = await svc.update_word(user_id=str(user.id), word_id=word_id, data=data)
     if word is None:
-        raise HTTPException(status_code=404, detail="Word not found")
+        raise HTTPException(status_code=404, detail="Kelime bulunamadı")
     return _to_response(word)
 
 
@@ -83,18 +87,20 @@ async def update_word(
 async def delete_word(
     word_id: str,
     svc: WordService = Depends(get_word_service),
+    user: User = Depends(get_current_user),
 ):
-    deleted = await svc.delete_word(word_id)
+    deleted = await svc.delete_word(user_id=str(user.id), word_id=word_id)
     if not deleted:
-        raise HTTPException(status_code=404, detail="Word not found")
+        raise HTTPException(status_code=404, detail="Kelime bulunamadı")
 
 
 @router.post("/{word_id}/regenerate-example", response_model=WordResponse)
 async def regenerate_example(
     word_id: str,
     svc: WordService = Depends(get_word_service),
+    user: User = Depends(get_current_user),
 ):
-    word = await svc.regenerate_example(word_id)
+    word = await svc.regenerate_example(user_id=str(user.id), word_id=word_id)
     if word is None:
-        raise HTTPException(status_code=404, detail="Word not found")
+        raise HTTPException(status_code=404, detail="Kelime bulunamadı")
     return _to_response(word)

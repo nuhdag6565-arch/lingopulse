@@ -24,8 +24,14 @@
   "python.analysis.typeCheckingMode": "basic",
   "python.analysis.autoImportCompletions": true,
   "python.terminal.activateEnvironment": true,
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/backend",
+    "${workspaceFolder}/backend/.venv/Lib/site-packages"
+  ],
+  "python.envFile": "${workspaceFolder}/backend/.env",
   "ruff.enable": true,
   "ruff.lint.enable": true,
+  "ruff.interpreter": ["${workspaceFolder}/backend/.venv/Scripts/python.exe"],
 
   // ── TypeScript / React Native ──────────────────────────────────────
   "[typescript]": {
