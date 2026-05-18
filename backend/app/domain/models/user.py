@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 
 from beanie import Document, Indexed
-from pydantic import Field, EmailStr
+from pydantic import Field
 
 
 class User(Document):

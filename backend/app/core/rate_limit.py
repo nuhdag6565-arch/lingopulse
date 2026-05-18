@@ -1,4 +1,4 @@
-"""AI endpoint'leri için rate limiting — pahalı LLM çağrılarını sınırla."""
+ """AI endpoint'leri için rate limiting — pahalı LLM çağrılarını sınırla."""
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address

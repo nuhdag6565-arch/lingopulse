@@ -1,0 +1,16 @@
+export const AppColors = {
+  primary: '#4F46E5',
+  primaryDark: '#3730A3',
+  primaryLight: '#818CF8',
+  secondary: '#10B981',
+  background: '#F9FAFB',
+  surface: '#FFFFFF',
+  textPrimary: '#111827',
+  textSecondary: '#6B7280',
+  textMuted: '#9CA3AF',
+  border: '#E5E7EB',
+  error: '#EF4444',
+  success: '#10B981',
+  warning: '#F59E0B',
+  cardShadow: 'rgba(0, 0, 0, 0.08)',
+};

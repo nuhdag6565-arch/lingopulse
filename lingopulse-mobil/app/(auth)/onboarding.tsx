@@ -1,0 +1,183 @@
+import { useState, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Dimensions,
+  Animated,
+} from 'react-native';
+import { router } from 'expo-router';
+import { AppColors } from '@/src/constants/colors';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const STEPS = [
+  {
+    icon: '📚',
+    title: 'Kelimelerini Ekle',
+    description: 'Öğrenmek istediğin kelimeleri ve anlamlarını listene ekle. Listeni dilediğin zaman genişlet.',
+  },
+  {
+    icon: '🤖',
+    title: 'Yapay Zeka Destekli',
+    description: 'Her kelime için yapay zeka otomatik olarak A2-B1 seviyesinde bir örnek cümle oluşturur.',
+  },
+  {
+    icon: '🔁',
+    title: 'Tekrar ile Öğren',
+    description: 'SM-2 algoritması ile doğru zamanda doğru kelimeyi tekrar ederek kalıcı öğrenme sağla.',
+  },
+];
+
+export default function OnboardingScreen() {
+  const [step, setStep] = useState(0);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  const goTo = (nextStep: number) => {
+    Animated.sequence([
+      Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+    setStep(nextStep);
+  };
+
+  const isLast = step === STEPS.length - 1;
+  const current = STEPS[step];
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.skipRow}>
+        <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
+          <Text style={styles.skipText}>Atla</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+        <Text style={styles.icon}>{current.icon}</Text>
+        <Text style={styles.title}>{current.title}</Text>
+        <Text style={styles.description}>{current.description}</Text>
+      </Animated.View>
+
+      <View style={styles.dotsRow}>
+        {STEPS.map((_, i) => (
+          <View
+            key={i}
+            style={[styles.dot, i === step && styles.dotActive]}
+          />
+        ))}
+      </View>
+
+      <View style={styles.footer}>
+        {isLast ? (
+          <>
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={() => router.replace('/(auth)/register')}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.primaryBtnText}>Hesap Oluştur</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.secondaryBtn}
+              onPress={() => router.replace('/(auth)/login')}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.secondaryBtnText}>Giriş Yap</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => goTo(step + 1)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.primaryBtnText}>İleri →</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: AppColors.background,
+    paddingHorizontal: 32,
+    paddingTop: 60,
+    paddingBottom: 48,
+  },
+  skipRow: {
+    alignItems: 'flex-end',
+  },
+  skipText: {
+    fontSize: 15,
+    color: AppColors.textMuted,
+    fontWeight: '600',
+  },
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 20,
+    maxWidth: SCREEN_WIDTH - 64,
+  },
+  icon: {
+    fontSize: 80,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: AppColors.textPrimary,
+    textAlign: 'center',
+  },
+  description: {
+    fontSize: 16,
+    color: AppColors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 32,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: AppColors.border,
+  },
+  dotActive: {
+    backgroundColor: AppColors.primary,
+    width: 24,
+  },
+  footer: {
+    gap: 12,
+  },
+  primaryBtn: {
+    backgroundColor: AppColors.primary,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  primaryBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  secondaryBtn: {
+    borderWidth: 1.5,
+    borderColor: AppColors.primary,
+    borderRadius: 14,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  secondaryBtnText: {
+    color: AppColors.primary,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+});
