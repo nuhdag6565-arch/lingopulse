@@ -96,6 +96,7 @@ export const FlashCardScreen: React.FC = () => {
 
       {/* Kart */}
       <Animated.View style={[styles.cardArea, { opacity: fadeAnim }]}>
+        {/* key={current.id} → her yeni kart fresh mount, flip animasyonu sıfırlanır */}
         <FlashCard key={current.id} word={current} revealed={revealed} />
       </Animated.View>
 

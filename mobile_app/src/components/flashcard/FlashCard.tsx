@@ -8,8 +8,7 @@ interface Props {
   revealed: boolean;
 }
 
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = width - 48;
+const CARD_WIDTH = Dimensions.get('window').width - 48;
 
 export const FlashCard: React.FC<Props> = ({ word, revealed }) => {
   const flipAnim = useRef(new Animated.Value(0)).current;
@@ -23,14 +22,15 @@ export const FlashCard: React.FC<Props> = ({ word, revealed }) => {
     }).start();
   }, [revealed]);
 
-  const frontRotate = flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
-  const backRotate  = flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '360deg'] });
-  const frontOpacity = flipAnim.interpolate({ inputRange: [0.4, 0.5], outputRange: [1, 0] });
-  const backOpacity  = flipAnim.interpolate({ inputRange: [0.4, 0.5], outputRange: [0, 1] });
+  const frontRotate   = flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
+  const backRotate    = flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '360deg'] });
+  const frontOpacity  = flipAnim.interpolate({ inputRange: [0.4, 0.5], outputRange: [1, 0] });
+  const backOpacity   = flipAnim.interpolate({ inputRange: [0.4, 0.5], outputRange: [0, 1] });
 
   return (
     <View style={[styles.container, { width: CARD_WIDTH }]}>
-      {/* ÖN YÜZ — Kelime */}
+
+      {/* ÖN YÜZ — Sadece kelime + telaffuz */}
       <Animated.View
         style={[
           styles.card,
@@ -38,14 +38,15 @@ export const FlashCard: React.FC<Props> = ({ word, revealed }) => {
           { transform: [{ perspective: 1200 }, { rotateY: frontRotate }], opacity: frontOpacity },
         ]}
       >
-        <Text style={styles.langTag}>EN</Text>
+        <Text style={styles.langLabel}>İNGİLİZCE</Text>
         <Text style={styles.wordText}>{word.word}</Text>
-        <View style={styles.ttsWrap}>
+        <View style={styles.ttsRow}>
           <TTSButton text={word.word} language="en-US" size={20} />
+          <Text style={styles.ttsHint}>Telaffuzu dinle</Text>
         </View>
       </Animated.View>
 
-      {/* ARKA YÜZ — Anlam */}
+      {/* ARKA YÜZ — Anlam + örnek cümle + her ikisinin TTS'i */}
       <Animated.View
         style={[
           styles.card,
@@ -53,30 +54,50 @@ export const FlashCard: React.FC<Props> = ({ word, revealed }) => {
           { transform: [{ perspective: 1200 }, { rotateY: backRotate }], opacity: backOpacity },
         ]}
       >
-        <Text style={styles.langTag}>TR</Text>
+        {/* Kelime küçük tekrar göster */}
         <Text style={styles.wordSmall}>{word.word}</Text>
         <View style={styles.divider} />
-        <Text style={styles.meaningText}>{word.meaning}</Text>
-        <View style={styles.ttsWrap}>
-          <TTSButton text={word.word} language="en-US" size={20} />
+
+        {/* Türkçe anlam */}
+        <View style={styles.meaningRow}>
+          <Text style={styles.langLabel}>TÜRKÇE</Text>
+          <Text style={styles.meaningText}>{word.meaning}</Text>
+        </View>
+
+        {/* Örnek cümle */}
+        {word.example_sentence ? (
+          <View style={styles.exampleBox}>
+            <View style={styles.exampleHeader}>
+              <Text style={styles.exampleLabel}>Örnek cümle</Text>
+              <TTSButton text={word.example_sentence} language="en-US" size={16} />
+            </View>
+            <Text style={styles.exampleSentence}>"{word.example_sentence}"</Text>
+            {word.example_sentence_translation ? (
+              <Text style={styles.exampleTranslation}>{word.example_sentence_translation}</Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* Kelime TTS sol alt */}
+        <View style={styles.wordTtsWrap}>
+          <TTSButton text={word.word} language="en-US" size={16} />
         </View>
       </Animated.View>
+
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    height: 320,
+    height: 360,
     alignSelf: 'center',
   },
   card: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#ffffff',
     borderRadius: 20,
-    padding: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 28,
     shadowColor: '#4F46E5',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.12,
@@ -84,47 +105,94 @@ const styles = StyleSheet.create({
     elevation: 8,
     backfaceVisibility: 'hidden',
   },
-  front: {},
-  back: { backgroundColor: '#F5F3FF' },
-  langTag: {
-    position: 'absolute',
-    top: 16,
-    left: 20,
-    fontSize: 11,
+  front: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  back: {
+    backgroundColor: '#F5F3FF',
+    justifyContent: 'center',
+    gap: 10,
+  },
+
+  langLabel: {
+    fontSize: 10,
     fontWeight: '700',
     color: '#A5B4FC',
-    letterSpacing: 1.5,
+    letterSpacing: 2,
   },
   wordText: {
-    fontSize: 38,
+    fontSize: 40,
     fontWeight: '800',
     color: '#1E1B4B',
     textAlign: 'center',
     letterSpacing: -0.5,
   },
+  ttsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  ttsHint: {
+    fontSize: 12,
+    color: '#A5B4FC',
+    fontWeight: '500',
+  },
+
   wordSmall: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#9CA3AF',
     textAlign: 'center',
-    marginBottom: 4,
   },
   divider: {
-    width: 40,
-    height: 2,
+    height: 1,
     backgroundColor: '#E0E7FF',
-    borderRadius: 1,
-    marginVertical: 12,
+    marginVertical: 4,
+  },
+  meaningRow: {
+    gap: 2,
   },
   meaningText: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '700',
     color: '#1E1B4B',
-    textAlign: 'center',
   },
-  ttsWrap: {
+
+  exampleBox: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: 12,
+    padding: 12,
+    gap: 4,
+    marginTop: 4,
+  },
+  exampleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  exampleLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#818CF8',
+    letterSpacing: 1.5,
+  },
+  exampleSentence: {
+    fontSize: 13,
+    color: '#374151',
+    fontStyle: 'italic',
+    lineHeight: 19,
+  },
+  exampleTranslation: {
+    fontSize: 12,
+    color: '#6B7280',
+    lineHeight: 18,
+  },
+
+  wordTtsWrap: {
     position: 'absolute',
-    bottom: 20,
-    right: 20,
+    bottom: 16,
+    right: 16,
   },
 });

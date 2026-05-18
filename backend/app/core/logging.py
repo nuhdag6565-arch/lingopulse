@@ -16,3 +16,5 @@ def configure_logging() -> None:
     )
     logging.getLogger("motor").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("pymongo").setLevel(logging.WARNING)
+    logging.getLogger("beanie").setLevel(logging.WARNING)
