@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -16,18 +16,21 @@ import { AppColors } from '@/src/constants/colors';
 
 export default function LoginScreen() {
   const { login } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const emailRef = useRef('');
+  const passwordRef = useRef('');
+  const passwordInputRef = useRef<TextInput>(null);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
+    const email = emailRef.current.trim();
+    const password = passwordRef.current;
+    if (!email || !password) {
       Alert.alert('Hata', 'E-posta ve şifre alanları zorunludur.');
       return;
     }
     setLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(email, password);
       router.replace('/(tabs)');
     } catch {
       Alert.alert('Giriş Başarısız', 'E-posta veya şifre hatalı.');
@@ -54,23 +57,30 @@ export default function LoginScreen() {
               style={styles.input}
               placeholder="ornek@email.com"
               placeholderTextColor={AppColors.textMuted}
-              value={email}
-              onChangeText={setEmail}
+              onChangeText={(t) => { emailRef.current = t; }}
               keyboardType="email-address"
               autoCapitalize="none"
-              autoCorrect={false}
+              autoComplete="email"
+              textContentType="emailAddress"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordInputRef.current?.focus()}
+              submitBehavior="submit"
             />
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Şifre</Text>
             <TextInput
+              ref={passwordInputRef}
               style={styles.input}
               placeholder="••••••••"
               placeholderTextColor={AppColors.textMuted}
-              value={password}
-              onChangeText={setPassword}
+              onChangeText={(t) => { passwordRef.current = t; }}
               secureTextEntry
+              autoComplete="password"
+              textContentType="password"
+              returnKeyType="done"
+              onSubmitEditing={handleLogin}
             />
           </View>
 

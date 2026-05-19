@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -15,27 +15,26 @@ import { router } from 'expo-router';
 import { useWords } from '@/src/context/WordContext';
 import { AppColors } from '@/src/constants/colors';
 
-const LANGUAGES = [
-  { code: 'en-US', label: '🇺🇸 İngilizce' },
-  { code: 'de-DE', label: '🇩🇪 Almanca' },
-  { code: 'fr-FR', label: '🇫🇷 Fransızca' },
-  { code: 'es-ES', label: '🇪🇸 İspanyolca' },
-];
-
 export default function AddWordScreen() {
   const { addWord, isGenerating } = useWords();
-  const [word, setWord] = useState('');
-  const [meaning, setMeaning] = useState('');
-  const [language, setLanguage] = useState('en-US');
+  const wordRef = useRef('');
+  const meaningRef = useRef('');
+  const meaningInputRef = useRef<TextInput>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleAdd = async () => {
-    if (!word.trim() || !meaning.trim()) {
+    const word = wordRef.current.trim();
+    const meaning = meaningRef.current.trim();
+    if (!word || !meaning) {
       Alert.alert('Hata', 'Kelime ve anlam alanları zorunludur.');
       return;
     }
-    await addWord(word, meaning, language);
+    setLoading(true);
+    await addWord(word, meaning, 'en-US');
     router.back();
   };
+
+  const canAdd = !loading && !isGenerating;
 
   return (
     <KeyboardAvoidingView
@@ -61,41 +60,26 @@ export default function AddWordScreen() {
               style={styles.input}
               placeholder="örn: serendipity"
               placeholderTextColor={AppColors.textMuted}
-              value={word}
-              onChangeText={setWord}
+              onChangeText={(t) => { wordRef.current = t; }}
               autoCapitalize="none"
-              autoCorrect={false}
               autoFocus
+              returnKeyType="next"
+              onSubmitEditing={() => meaningInputRef.current?.focus()}
+              submitBehavior="submit"
             />
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Türkçe Anlam</Text>
             <TextInput
+              ref={meaningInputRef}
               style={styles.input}
               placeholder="örn: tesadüfen güzel şeyler keşfetme"
               placeholderTextColor={AppColors.textMuted}
-              value={meaning}
-              onChangeText={setMeaning}
+              onChangeText={(t) => { meaningRef.current = t; }}
+              returnKeyType="done"
+              onSubmitEditing={handleAdd}
             />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Dil</Text>
-            <View style={styles.langRow}>
-              {LANGUAGES.map((lang) => (
-                <TouchableOpacity
-                  key={lang.code}
-                  style={[styles.langBtn, language === lang.code && styles.langBtnActive]}
-                  onPress={() => setLanguage(lang.code)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.langBtnText, language === lang.code && styles.langBtnTextActive]}>
-                    {lang.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
           </View>
 
           <View style={styles.aiNote}>
@@ -107,9 +91,9 @@ export default function AddWordScreen() {
         </View>
 
         <TouchableOpacity
-          style={[styles.addBtn, (isGenerating || !word.trim() || !meaning.trim()) && styles.addBtnDisabled]}
+          style={[styles.addBtn, !canAdd && styles.addBtnDisabled]}
           onPress={handleAdd}
-          disabled={isGenerating || !word.trim() || !meaning.trim()}
+          disabled={!canAdd}
           activeOpacity={0.85}
         >
           {isGenerating ? (
@@ -117,6 +101,8 @@ export default function AddWordScreen() {
               <ActivityIndicator color="#fff" size="small" />
               <Text style={styles.addBtnText}>Cümle üretiliyor...</Text>
             </View>
+          ) : loading ? (
+            <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.addBtnText}>Kelime Ekle</Text>
           )}
@@ -181,32 +167,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 15,
     color: AppColors.textPrimary,
-  },
-  langRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  langBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: AppColors.surface,
-    borderWidth: 1.5,
-    borderColor: AppColors.border,
-  },
-  langBtnActive: {
-    backgroundColor: '#EEF2FF',
-    borderColor: AppColors.primary,
-  },
-  langBtnText: {
-    fontSize: 13,
-    color: AppColors.textSecondary,
-    fontWeight: '500',
-  },
-  langBtnTextActive: {
-    color: AppColors.primary,
-    fontWeight: '700',
   },
   aiNote: {
     flexDirection: 'row',

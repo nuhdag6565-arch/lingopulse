@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -17,18 +17,33 @@ import { AppColors } from '@/src/constants/colors';
 
 export default function RegisterScreen() {
   const { register } = useAuth();
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+
+  // Uncontrolled: values live in refs, never passed back as `value` prop
+  const fullNameRef = useRef('');
+  const emailRef = useRef('');
+  const passwordRef = useRef('');
+  const confirmRef = useRef('');
+
+  // Only this drives a re-render — shown below confirm field
+  const [mismatch, setMismatch] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const emailInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
+  const confirmInputRef = useRef<TextInput>(null);
+
   const handleRegister = async () => {
-    if (!fullName.trim() || !email.trim() || !password || !confirmPassword) {
+    const fullName = fullNameRef.current.trim();
+    const email = emailRef.current.trim();
+    const password = passwordRef.current;
+    const confirm = confirmRef.current;
+
+    if (!fullName || !email || !password || !confirm) {
       Alert.alert('Hata', 'Tüm alanlar zorunludur.');
       return;
     }
-    if (password !== confirmPassword) {
+    if (password !== confirm) {
+      setMismatch(true);
       Alert.alert('Hata', 'Şifreler eşleşmiyor.');
       return;
     }
@@ -38,7 +53,7 @@ export default function RegisterScreen() {
     }
     setLoading(true);
     try {
-      await register(fullName.trim(), email.trim(), password);
+      await register(fullName, email, password);
       router.replace('/(tabs)');
     } catch {
       Alert.alert('Kayıt Başarısız', 'Bir hata oluştu. Lütfen tekrar dene.');
@@ -69,52 +84,72 @@ export default function RegisterScreen() {
               style={styles.input}
               placeholder="Adınız Soyadınız"
               placeholderTextColor={AppColors.textMuted}
-              value={fullName}
-              onChangeText={setFullName}
+              onChangeText={(t) => { fullNameRef.current = t; }}
               autoCapitalize="words"
+              autoComplete="name"
+              textContentType="name"
+              returnKeyType="next"
+              onSubmitEditing={() => emailInputRef.current?.focus()}
+              submitBehavior="submit"
             />
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>E-posta</Text>
             <TextInput
+              ref={emailInputRef}
               style={styles.input}
               placeholder="ornek@email.com"
               placeholderTextColor={AppColors.textMuted}
-              value={email}
-              onChangeText={setEmail}
+              onChangeText={(t) => { emailRef.current = t; }}
               keyboardType="email-address"
               autoCapitalize="none"
-              autoCorrect={false}
+              autoComplete="email"
+              textContentType="emailAddress"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordInputRef.current?.focus()}
+              submitBehavior="submit"
             />
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Şifre</Text>
             <TextInput
+              ref={passwordInputRef}
               style={styles.input}
               placeholder="En az 6 karakter"
               placeholderTextColor={AppColors.textMuted}
-              value={password}
-              onChangeText={setPassword}
+              onChangeText={(t) => {
+                passwordRef.current = t;
+                if (mismatch) setMismatch(false);
+              }}
               secureTextEntry
+              autoComplete="new-password"
+              textContentType="newPassword"
+              returnKeyType="next"
+              onSubmitEditing={() => confirmInputRef.current?.focus()}
+              submitBehavior="submit"
             />
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Şifre Tekrar</Text>
             <TextInput
-              style={[
-                styles.input,
-                confirmPassword.length > 0 && password !== confirmPassword && styles.inputError,
-              ]}
+              ref={confirmInputRef}
+              style={[styles.input, mismatch && styles.inputError]}
               placeholder="Şifrenizi tekrar girin"
               placeholderTextColor={AppColors.textMuted}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
+              onChangeText={(t) => {
+                confirmRef.current = t;
+                setMismatch(t.length > 0 && t !== passwordRef.current);
+              }}
               secureTextEntry
+              autoComplete="new-password"
+              textContentType="newPassword"
+              returnKeyType="done"
+              onSubmitEditing={handleRegister}
             />
-            {confirmPassword.length > 0 && password !== confirmPassword && (
+            {mismatch && (
               <Text style={styles.errorText}>Şifreler eşleşmiyor</Text>
             )}
           </View>
