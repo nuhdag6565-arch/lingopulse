@@ -3,9 +3,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.v1.dependencies import get_auth_service, get_current_user
 from app.domain.models.user import User
 from app.domain.schemas.auth import (
+    ForgotPasswordRequest,
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
+    ResetPasswordRequest,
     TokenResponse,
     UserResponse,
 )
@@ -56,3 +58,25 @@ async def me(current_user: User = Depends(get_current_user)):
         full_name=current_user.full_name,
         is_active=current_user.is_active,
     )
+
+
+@router.post("/forgot-password", status_code=status.HTTP_200_OK)
+async def forgot_password(
+    data: ForgotPasswordRequest,
+    svc: AuthService = Depends(get_auth_service),
+):
+    await svc.forgot_password(data.email)
+    # Her zaman aynı yanıt — e-posta numaralandırmasını önle
+    return {"message": "Eğer bu e-posta kayıtlıysa sıfırlama kodu gönderildi."}
+
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+async def reset_password(
+    data: ResetPasswordRequest,
+    svc: AuthService = Depends(get_auth_service),
+):
+    try:
+        await svc.reset_password(data.email, data.code, data.new_password)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return {"message": "Şifreniz başarıyla güncellendi."}

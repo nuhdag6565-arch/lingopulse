@@ -1,5 +1,6 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
-import { router } from 'expo-router';
+import { useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/src/context/AuthContext';
 import { useWords } from '@/src/context/WordContext';
 import { EmptyState } from '@/src/components/EmptyState';
@@ -7,8 +8,19 @@ import { AppColors } from '@/src/constants/colors';
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
-  const { lists, deleteList, getListWords, getDueWords } = useWords();
-  const dueCount = getDueWords().length;
+  const { lists, isLoadingLists, loadLists, deleteList, dueWords, loadDueWords, reset } = useWords();
+
+  useFocusEffect(
+    useCallback(() => {
+      loadLists();
+      loadDueWords();
+    }, [loadLists, loadDueWords]),
+  );
+
+  const handleLogout = async () => {
+    reset();
+    await logout();
+  };
 
   const confirmDelete = (id: string, name: string) => {
     Alert.alert(
@@ -16,8 +28,18 @@ export default function HomeScreen() {
       `"${name}" listesi ve içindeki tüm kelimeler silinecek. Devam edilsin mi?`,
       [
         { text: 'İptal', style: 'cancel' },
-        { text: 'Sil', style: 'destructive', onPress: () => deleteList(id) },
-      ]
+        {
+          text: 'Sil',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteList(id);
+            } catch {
+              Alert.alert('Hata', 'Liste silinemedi.');
+            }
+          },
+        },
+      ],
     );
   };
 
@@ -30,25 +52,29 @@ export default function HomeScreen() {
           </Text>
           <Text style={styles.subGreeting}>Kelime listelerim</Text>
         </View>
-        <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
           <Text style={styles.logoutText}>Çıkış</Text>
         </TouchableOpacity>
       </View>
 
-      {dueCount > 0 && (
+      {dueWords.length > 0 && (
         <TouchableOpacity
           style={styles.reviewBanner}
           onPress={() => router.push('/(tabs)/review')}
           activeOpacity={0.85}
         >
           <Text style={styles.reviewBannerText}>
-            🔁  {dueCount} kelime tekrar bekliyor
+            🔁  {dueWords.length} kelime tekrar bekliyor
           </Text>
           <Text style={styles.reviewBannerArrow}>→</Text>
         </TouchableOpacity>
       )}
 
-      {lists.length === 0 ? (
+      {isLoadingLists && lists.length === 0 ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={AppColors.primary} />
+        </View>
+      ) : lists.length === 0 ? (
         <EmptyState
           icon="📚"
           title="Henüz listeniz yok"
@@ -62,35 +88,32 @@ export default function HomeScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => {
-            const wordCount = getListWords(item.id).length;
-            return (
-              <TouchableOpacity
-                style={styles.card}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.card}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onPress={() => router.push(`/list/${item.id}` as any)}
-                activeOpacity={0.88}
-              >
-                <View style={styles.cardLeft}>
-                  <Text style={styles.cardIcon}>📖</Text>
-                  <View>
-                    <Text style={styles.cardName}>{item.name}</Text>
-                    <Text style={styles.cardCount}>{wordCount} kelime</Text>
-                  </View>
+              activeOpacity={0.88}
+            >
+              <View style={styles.cardLeft}>
+                <Text style={styles.cardIcon}>📖</Text>
+                <View>
+                  <Text style={styles.cardName}>{item.name}</Text>
+                  <Text style={styles.cardCount}>{item.wordCount} kelime</Text>
                 </View>
-                <View style={styles.cardRight}>
-                  <Text style={styles.cardArrow}>›</Text>
-                  <TouchableOpacity
-                    onPress={() => confirmDelete(item.id, item.name)}
-                    style={styles.deleteBtn}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Text style={styles.deleteIcon}>🗑</Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            );
-          }}
+              </View>
+              <View style={styles.cardRight}>
+                <Text style={styles.cardArrow}>›</Text>
+                <TouchableOpacity
+                  onPress={() => confirmDelete(item.id, item.name)}
+                  style={styles.deleteBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.deleteIcon}>🗑</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          )}
         />
       )}
 
@@ -110,6 +133,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: AppColors.background,
     paddingTop: 60,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   header: {
     flexDirection: 'row',

@@ -61,15 +61,8 @@ export function FlashCard({ word, revealed }: Props) {
         <Text style={styles.wordSmall}>{word.word}</Text>
         <View style={styles.divider} />
         <Text style={styles.meaningText}>{word.meaning}</Text>
-        <View style={styles.exampleBox}>
-          <View style={styles.exampleHeader}>
-            <Text style={styles.exampleLabel}>Örnek Cümle</Text>
-            <TTSButton text={word.exampleSentence} language={word.language} size={18} />
-          </View>
-          <Text style={styles.exampleText}>{word.exampleSentence}</Text>
-        </View>
         <View style={styles.wordTTSRow}>
-          <TTSButton text={word.word} language={word.language} size={20} />
+          <TTSButton text={word.word} language={word.language} size={22} />
         </View>
       </Animated.View>
     </View>
@@ -79,7 +72,7 @@ export function FlashCard({ word, revealed }: Props) {
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    height: 340,
+    height: 280,
   },
   card: {
     position: 'absolute',
@@ -102,7 +95,7 @@ const styles = StyleSheet.create({
   },
   back: {
     justifyContent: 'center',
-    gap: 12,
+    gap: 14,
   },
   langTag: {
     fontSize: 11,
@@ -148,32 +141,9 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.border,
   },
   meaningText: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '800',
     color: AppColors.textPrimary,
-  },
-  exampleBox: {
-    backgroundColor: '#F5F3FF',
-    borderRadius: 12,
-    padding: 14,
-    gap: 6,
-  },
-  exampleHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  exampleLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: AppColors.primary,
-    letterSpacing: 1,
-  },
-  exampleText: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-    fontStyle: 'italic',
-    lineHeight: 20,
   },
   wordTTSRow: {
     alignSelf: 'flex-end',

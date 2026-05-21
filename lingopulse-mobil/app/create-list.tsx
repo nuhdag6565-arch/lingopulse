@@ -7,6 +7,8 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useWords } from '@/src/context/WordContext';
@@ -15,13 +17,23 @@ import { AppColors } from '@/src/constants/colors';
 export default function CreateListScreen() {
   const { createList } = useWords();
   const nameRef = useRef('');
-  const [hasInput, setHasInput] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     const name = nameRef.current.trim();
-    if (!name) return;
-    createList(name);
-    router.back();
+    if (!name) {
+      Alert.alert('Hata', 'Liste adı boş olamaz.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await createList(name);
+      router.back();
+    } catch {
+      Alert.alert('Hata', 'Liste oluşturulurken bir sorun oluştu.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -42,23 +54,24 @@ export default function CreateListScreen() {
           style={styles.input}
           placeholder="örn: İş İngilizcesi, Seyahat, IELTS..."
           placeholderTextColor={AppColors.textMuted}
-          onChangeText={(t) => {
-            nameRef.current = t;
-            setHasInput(t.trim().length > 0);
-          }}
+          onChangeText={(t) => { nameRef.current = t; }}
+          autoCapitalize="none"
+          spellCheck={false}
           autoFocus
-          returnKeyType="done"
-          onSubmitEditing={handleCreate}
           maxLength={100}
         />
 
         <TouchableOpacity
-          style={[styles.button, !hasInput && styles.buttonDisabled]}
+          style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleCreate}
-          disabled={!hasInput}
+          disabled={loading}
           activeOpacity={0.85}
         >
-          <Text style={styles.buttonText}>Liste Oluştur</Text>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Liste Oluştur</Text>
+          )}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -123,7 +136,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonDisabled: {
-    opacity: 0.45,
+    opacity: 0.6,
   },
   buttonText: {
     color: '#fff',

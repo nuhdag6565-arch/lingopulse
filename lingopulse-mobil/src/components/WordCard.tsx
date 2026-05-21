@@ -46,12 +46,6 @@ export function WordCard({ word, onDelete }: Props) {
       {expanded && (
         <View style={styles.expanded}>
           <View style={styles.divider} />
-          <View style={styles.exampleRow}>
-            <Text style={styles.exampleText} numberOfLines={3}>
-              {word.exampleSentence}
-            </Text>
-            <TTSButton text={word.exampleSentence} language={word.language} size={16} />
-          </View>
           <View style={styles.levelRow}>
             <View style={[styles.levelDot, { backgroundColor: LEVEL_COLORS[word.learningLevel] }]} />
             <Text style={[styles.levelLabel, { color: LEVEL_COLORS[word.learningLevel] }]}>
@@ -107,24 +101,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   expanded: {
-    gap: 10,
+    gap: 8,
     marginTop: 10,
   },
   divider: {
     height: 1,
     backgroundColor: AppColors.border,
-  },
-  exampleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  exampleText: {
-    flex: 1,
-    fontSize: 13,
-    color: AppColors.textSecondary,
-    fontStyle: 'italic',
-    lineHeight: 19,
   },
   levelRow: {
     flexDirection: 'row',

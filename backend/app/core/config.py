@@ -20,6 +20,12 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:8081"
 
+    # E-posta / SMTP (isteğe bağlı — boş bırakılırsa kod konsola yazdırılır)
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",")]

@@ -14,19 +14,19 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const STEPS = [
   {
-    icon: '📚',
-    title: 'Kelimelerini Ekle',
-    description: 'Öğrenmek istediğin kelimeleri ve anlamlarını listene ekle. Listeni dilediğin zaman genişlet.',
+    icon: '📖',
+    title: 'Konuya Göre Organize Et',
+    description: 'İş İngilizcesi, IELTS, seyahat… Her konu için ayrı liste oluştur, kelimeni ve Türkçe anlamını ekle.',
   },
   {
-    icon: '🤖',
-    title: 'Yapay Zeka Destekli',
-    description: 'Her kelime için yapay zeka otomatik olarak A2-B1 seviyesinde bir örnek cümle oluşturur.',
+    icon: '🔊',
+    title: 'Telaffuzu Doğru Öğren',
+    description: 'Her kelimenin sesini tek dokunuşla duy. Doğru telaffuzu kulağına kazıyarak öğrenmeyi hızlandır.',
   },
   {
-    icon: '🔁',
-    title: 'Tekrar ile Öğren',
-    description: 'SM-2 algoritması ile doğru zamanda doğru kelimeyi tekrar ederek kalıcı öğrenme sağla.',
+    icon: '🧠',
+    title: 'Akıllı Tekrar ile Ezberle',
+    description: 'SM-2 algoritması hangi kelimeyi ne zaman tekrar edeceğini bilir. Doğru zamanda çalış, kısa sürede çok kelime öğren.',
   },
 ];
 

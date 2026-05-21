@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import * as SecureStore from 'expo-secure-store';
+import { apiLogin, apiRegister, apiGetMe, type UserResponse } from '../api/auth';
 
 interface User {
   id: string;
@@ -12,31 +14,63 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (fullName: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+function mapUser(u: UserResponse): User {
+  return { id: u.id, fullName: u.full_name, email: u.email };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const login = useCallback(async (email: string, _password: string) => {
-    // TODO: replace with real API call
-    setUser({ id: '1', fullName: email.split('@')[0], email });
+  useEffect(() => {
+    const restore = async () => {
+      try {
+        const token = await SecureStore.getItemAsync('access_token');
+        if (token) {
+          const me = await apiGetMe(token);
+          setUser(mapUser(me));
+        }
+      } catch {
+        await SecureStore.deleteItemAsync('access_token');
+        await SecureStore.deleteItemAsync('refresh_token');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    restore();
   }, []);
 
-  const register = useCallback(async (fullName: string, email: string, _password: string) => {
-    // TODO: replace with real API call
-    setUser({ id: '1', fullName, email });
+  const login = useCallback(async (email: string, password: string) => {
+    const tokens = await apiLogin(email, password);
+    await SecureStore.setItemAsync('access_token', tokens.access_token);
+    await SecureStore.setItemAsync('refresh_token', tokens.refresh_token);
+    const me = await apiGetMe(tokens.access_token);
+    setUser(mapUser(me));
   }, []);
 
-  const logout = useCallback(() => {
+  const register = useCallback(async (fullName: string, email: string, password: string) => {
+    const tokens = await apiRegister(fullName, email, password);
+    await SecureStore.setItemAsync('access_token', tokens.access_token);
+    await SecureStore.setItemAsync('refresh_token', tokens.refresh_token);
+    const me = await apiGetMe(tokens.access_token);
+    setUser(mapUser(me));
+  }, []);
+
+  const logout = useCallback(async () => {
+    await SecureStore.deleteItemAsync('access_token');
+    await SecureStore.deleteItemAsync('refresh_token');
     setUser(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, isAuthenticated: !!user, isLoading, login, register, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

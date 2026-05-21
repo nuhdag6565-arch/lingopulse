@@ -1,5 +1,3 @@
-"""Kelime oluşturma, AI zenginleştirme ve tekrar işlemlerini orkestre eder."""
-
 from datetime import datetime, timezone
 
 from app.db.repositories.word_repository import WordRepository
@@ -7,7 +5,6 @@ from app.db.repositories.review_repository import ReviewRepository
 from app.domain.models.word import Word
 from app.domain.models.review import Review
 from app.domain.schemas.word import WordCreate, WordUpdate
-from app.services.ai_service import generate_example
 from app.services.spaced_repetition_service import calculate_next_review
 
 
@@ -17,14 +14,11 @@ class WordService:
         self.review_repo = ReviewRepository()
 
     async def create_word(self, user_id: str, data: WordCreate) -> Word:
-        example = await generate_example(data.word, data.meaning)
         word = Word(
             user_id=user_id,
             list_id=data.list_id,
             word=data.word,
             meaning=data.meaning,
-            example_sentence=example.sentence,
-            example_sentence_translation=example.translation,
         )
         return await self.word_repo.save(word)
 
@@ -74,13 +68,3 @@ class WordService:
         word.updated_at = datetime.now(timezone.utc)
         await self.word_repo.save(word)
         return review
-
-    async def regenerate_example(self, user_id: str, word_id: str) -> Word | None:
-        word = await self.word_repo.get_by_id(word_id)
-        if word is None or word.user_id != user_id:
-            return None
-        example = await generate_example(word.word, word.meaning)
-        word.example_sentence = example.sentence
-        word.example_sentence_translation = example.translation
-        word.updated_at = datetime.now(timezone.utc)
-        return await self.word_repo.save(word)

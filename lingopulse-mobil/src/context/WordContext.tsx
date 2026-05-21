@@ -1,8 +1,20 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { Alert } from 'react-native';
+import { fetchLists, createListApi, deleteListApi, type ApiWordList } from '../api/lists';
+import {
+  fetchWords,
+  fetchDueWords,
+  createWordApi,
+  deleteWordApi,
+  submitReviewApi,
+  type ApiWord,
+} from '../api/words';
 
 export interface WordList {
   id: string;
   name: string;
+  description: string;
+  wordCount: number;
   createdAt: string;
 }
 
@@ -11,7 +23,6 @@ export interface Word {
   listId: string;
   word: string;
   meaning: string;
-  exampleSentence: string;
   language: string;
   easeFactor: number;
   intervalDays: number;
@@ -22,143 +33,199 @@ export interface Word {
 
 interface WordContextType {
   lists: WordList[];
-  createList: (name: string) => void;
-  deleteList: (id: string) => void;
+  isLoadingLists: boolean;
+  loadLists: () => Promise<void>;
+  createList: (name: string) => Promise<void>;
+  deleteList: (id: string) => Promise<void>;
   getList: (id: string) => WordList | undefined;
+  listWords: Record<string, Word[]>;
+  isLoadingWords: boolean;
+  loadListWords: (listId: string) => Promise<void>;
   getListWords: (listId: string) => Word[];
-  words: Word[];
-  isGenerating: boolean;
   addWord: (word: string, meaning: string, listId: string) => Promise<void>;
-  deleteWord: (id: string) => void;
-  getDueWords: () => Word[];
-  reviewWord: (id: string, knew: boolean) => void;
+  deleteWord: (id: string) => Promise<void>;
+  dueWords: Word[];
+  isLoadingDue: boolean;
+  loadDueWords: () => Promise<Word[]>;
+  reviewWord: (id: string, knew: boolean) => Promise<void>;
+  reset: () => void;
 }
 
 const WordContext = createContext<WordContextType | null>(null);
 
-function todayISO() {
-  return new Date().toISOString().split('T')[0];
-}
-
-function addDays(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split('T')[0];
-}
-
-function calcNextReview(word: Word, knew: boolean): Partial<Word> {
-  let { easeFactor, intervalDays } = word;
-  if (knew) {
-    if (intervalDays === 0) intervalDays = 1;
-    else if (intervalDays === 1) intervalDays = 6;
-    else intervalDays = Math.round(intervalDays * easeFactor);
-    easeFactor = Math.min(2.5, easeFactor + 0.1);
-  } else {
-    intervalDays = 1;
-    easeFactor = Math.max(1.3, easeFactor - 0.2);
-  }
+function mapList(l: ApiWordList): WordList {
   return {
-    easeFactor: Math.round(easeFactor * 100) / 100,
-    intervalDays,
-    nextReviewDate: addDays(intervalDays),
-    learningLevel: knew
-      ? Math.min(5, word.learningLevel + 1)
-      : Math.max(0, word.learningLevel - 1),
+    id: l.id,
+    name: l.name,
+    description: l.description,
+    wordCount: l.word_count,
+    createdAt: l.created_at,
   };
 }
 
-async function generateSentence(word: string): Promise<string> {
-  await new Promise((r) => setTimeout(r, 1200));
-  const templates = [
-    `She encountered the word "${word}" while reading a novel.`,
-    `Understanding "${word}" helped him communicate more effectively.`,
-    `The teacher explained what "${word}" means with a real-life example.`,
-    `Learning "${word}" opened new doors in her vocabulary.`,
-  ];
-  return templates[Math.floor(Math.random() * templates.length)];
+function mapWord(w: ApiWord): Word {
+  return {
+    id: w.id,
+    listId: w.list_id ?? '',
+    word: w.word,
+    meaning: w.meaning,
+    language: 'en-US',
+    easeFactor: w.ease_factor,
+    intervalDays: w.interval_days,
+    nextReviewDate: w.next_review_date,
+    learningLevel: w.learning_level,
+    createdAt: w.created_at,
+  };
 }
 
 export function WordProvider({ children }: { children: React.ReactNode }) {
   const [lists, setLists] = useState<WordList[]>([]);
-  const [words, setWords] = useState<Word[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [listWords, setListWords] = useState<Record<string, Word[]>>({});
+  const [dueWords, setDueWords] = useState<Word[]>([]);
+  const [isLoadingLists, setIsLoadingLists] = useState(false);
+  const [isLoadingWords, setIsLoadingWords] = useState(false);
+  const [isLoadingDue, setIsLoadingDue] = useState(false);
 
-  const createList = useCallback((name: string) => {
-    const newList: WordList = {
-      id: Date.now().toString(),
-      name: name.trim(),
-      createdAt: new Date().toISOString(),
-    };
-    setLists((prev) => [newList, ...prev]);
+  const loadLists = useCallback(async () => {
+    setIsLoadingLists(true);
+    try {
+      const data = await fetchLists();
+      setLists(data.map(mapList));
+    } catch (e: unknown) {
+      const status = (e as { response?: { status?: number } })?.response?.status;
+      if (status !== 401) {
+        Alert.alert('Hata', 'Listeler yüklenirken bir sorun oluştu.');
+      }
+    } finally {
+      setIsLoadingLists(false);
+    }
   }, []);
 
-  const deleteList = useCallback((id: string) => {
+  const createList = useCallback(async (name: string) => {
+    const data = await createListApi(name);
+    setLists((prev) => [mapList(data), ...prev]);
+  }, []);
+
+  const deleteList = useCallback(async (id: string) => {
+    await deleteListApi(id);
     setLists((prev) => prev.filter((l) => l.id !== id));
-    setWords((prev) => prev.filter((w) => w.listId !== id));
+    setListWords((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setDueWords((prev) => prev.filter((w) => w.listId !== id));
   }, []);
 
   const getList = useCallback(
     (id: string) => lists.find((l) => l.id === id),
-    [lists]
+    [lists],
   );
 
-  const getListWords = useCallback(
-    (listId: string) => words.filter((w) => w.listId === listId),
-    [words]
-  );
-
-  const addWord = useCallback(
-    async (word: string, meaning: string, listId: string) => {
-      setIsGenerating(true);
-      const sentence = await generateSentence(word);
-      setIsGenerating(false);
-      const newWord: Word = {
-        id: Date.now().toString(),
-        listId,
-        word: word.trim(),
-        meaning: meaning.trim(),
-        exampleSentence: sentence,
-        language: 'en-US',
-        easeFactor: 2.5,
-        intervalDays: 0,
-        nextReviewDate: todayISO(),
-        learningLevel: 0,
-        createdAt: new Date().toISOString(),
-      };
-      setWords((prev) => [newWord, ...prev]);
-    },
-    []
-  );
-
-  const deleteWord = useCallback((id: string) => {
-    setWords((prev) => prev.filter((w) => w.id !== id));
+  const loadListWords = useCallback(async (listId: string) => {
+    setIsLoadingWords(true);
+    try {
+      const data = await fetchWords(listId);
+      setListWords((prev) => ({ ...prev, [listId]: data.map(mapWord) }));
+    } catch {
+      Alert.alert('Hata', 'Kelimeler yüklenirken bir sorun oluştu.');
+    } finally {
+      setIsLoadingWords(false);
+    }
   }, []);
 
-  const getDueWords = useCallback((): Word[] => {
-    const today = todayISO();
-    return words.filter((w) => w.nextReviewDate <= today);
-  }, [words]);
+  const getListWords = useCallback(
+    (listId: string) => listWords[listId] ?? [],
+    [listWords],
+  );
 
-  const reviewWord = useCallback((id: string, knew: boolean) => {
-    setWords((prev) =>
-      prev.map((w) => (w.id === id ? { ...w, ...calcNextReview(w, knew) } : w))
+  const addWord = useCallback(async (word: string, meaning: string, listId: string) => {
+    const data = await createWordApi(word, meaning, listId);
+    const newWord = mapWord(data);
+    setListWords((prev) => ({
+      ...prev,
+      [listId]: [newWord, ...(prev[listId] ?? [])],
+    }));
+    setLists((prev) =>
+      prev.map((l) => (l.id === listId ? { ...l, wordCount: l.wordCount + 1 } : l)),
     );
+  }, []);
+
+  const deleteWord = useCallback(async (id: string) => {
+    try {
+      let wordListId: string | undefined;
+      setListWords((prev) => {
+        const next = { ...prev };
+        for (const lid of Object.keys(next)) {
+          const found = next[lid].some((w) => w.id === id);
+          if (found) {
+            wordListId = lid;
+            next[lid] = next[lid].filter((w) => w.id !== id);
+          }
+        }
+        return next;
+      });
+      await deleteWordApi(id);
+      if (wordListId) {
+        const wlid = wordListId;
+        setLists((prev) =>
+          prev.map((l) =>
+            l.id === wlid ? { ...l, wordCount: Math.max(0, l.wordCount - 1) } : l,
+          ),
+        );
+      }
+    } catch {
+      Alert.alert('Hata', 'Kelime silinirken bir sorun oluştu.');
+      // Reload the list to restore accurate state
+    }
+  }, []);
+
+  const loadDueWords = useCallback(async (): Promise<Word[]> => {
+    setIsLoadingDue(true);
+    try {
+      const data = await fetchDueWords();
+      const mapped = data.map(mapWord);
+      setDueWords(mapped);
+      return mapped;
+    } catch {
+      Alert.alert('Hata', 'Tekrar edilecek kelimeler yüklenemedi.');
+      return [];
+    } finally {
+      setIsLoadingDue(false);
+    }
+  }, []);
+
+  const reviewWord = useCallback(async (id: string, knew: boolean) => {
+    await submitReviewApi(id, knew);
+    setDueWords((prev) => prev.filter((w) => w.id !== id));
+  }, []);
+
+  const reset = useCallback(() => {
+    setLists([]);
+    setListWords({});
+    setDueWords([]);
   }, []);
 
   return (
     <WordContext.Provider
       value={{
         lists,
+        isLoadingLists,
+        loadLists,
         createList,
         deleteList,
         getList,
+        listWords,
+        isLoadingWords,
+        loadListWords,
         getListWords,
-        words,
-        isGenerating,
         addWord,
         deleteWord,
-        getDueWords,
+        dueWords,
+        isLoadingDue,
+        loadDueWords,
         reviewWord,
+        reset,
       }}
     >
       {children}

@@ -12,21 +12,22 @@ import {
   Alert,
 } from 'react-native';
 import { Link, router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/context/AuthContext';
 import { AppColors } from '@/src/constants/colors';
 
 export default function RegisterScreen() {
   const { register } = useAuth();
 
-  // Uncontrolled: values live in refs, never passed back as `value` prop
   const fullNameRef = useRef('');
   const emailRef = useRef('');
   const passwordRef = useRef('');
   const confirmRef = useRef('');
 
-  // Only this drives a re-render — shown below confirm field
   const [mismatch, setMismatch] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const emailInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
@@ -42,21 +43,32 @@ export default function RegisterScreen() {
       Alert.alert('Hata', 'Tüm alanlar zorunludur.');
       return;
     }
+    if (password.length < 8) {
+      Alert.alert('Hata', 'Şifre en az 8 karakter olmalıdır.');
+      return;
+    }
+    if (/[ğüşıöçĞÜŞİÖÇ]/.test(password)) {
+      Alert.alert('Hata', 'Şifre Türkçe karakter içeremez (ğ, ü, ş, ı, ö, ç).');
+      return;
+    }
     if (password !== confirm) {
       setMismatch(true);
       Alert.alert('Hata', 'Şifreler eşleşmiyor.');
-      return;
-    }
-    if (password.length < 6) {
-      Alert.alert('Hata', 'Şifre en az 6 karakter olmalıdır.');
       return;
     }
     setLoading(true);
     try {
       await register(fullName, email, password);
       router.replace('/(tabs)');
-    } catch {
-      Alert.alert('Kayıt Başarısız', 'Bir hata oluştu. Lütfen tekrar dene.');
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 409) {
+        Alert.alert('Kayıt Başarısız', 'Bu e-posta adresi zaten kullanılıyor.');
+      } else if (status === 422) {
+        Alert.alert('Kayıt Başarısız', 'Geçersiz e-posta veya şifre formatı.');
+      } else {
+        Alert.alert('Kayıt Başarısız', 'Bağlantı hatası. Sunucuya ulaşılamıyor.');
+      }
     } finally {
       setLoading(false);
     }
@@ -85,12 +97,8 @@ export default function RegisterScreen() {
               placeholder="Adınız Soyadınız"
               placeholderTextColor={AppColors.textMuted}
               onChangeText={(t) => { fullNameRef.current = t; }}
-              autoCapitalize="words"
-              autoComplete="name"
-              textContentType="name"
-              returnKeyType="next"
-              onSubmitEditing={() => emailInputRef.current?.focus()}
-              submitBehavior="submit"
+              autoCapitalize="none"
+              spellCheck={false}
             />
           </View>
 
@@ -104,8 +112,6 @@ export default function RegisterScreen() {
               onChangeText={(t) => { emailRef.current = t; }}
               keyboardType="email-address"
               autoCapitalize="none"
-              autoComplete="email"
-              textContentType="emailAddress"
               returnKeyType="next"
               onSubmitEditing={() => passwordInputRef.current?.focus()}
               submitBehavior="submit"
@@ -114,41 +120,67 @@ export default function RegisterScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Şifre</Text>
-            <TextInput
-              ref={passwordInputRef}
-              style={styles.input}
-              placeholder="En az 6 karakter"
-              placeholderTextColor={AppColors.textMuted}
-              onChangeText={(t) => {
-                passwordRef.current = t;
-                if (mismatch) setMismatch(false);
-              }}
-              secureTextEntry
-              autoComplete="new-password"
-              textContentType="newPassword"
-              returnKeyType="next"
-              onSubmitEditing={() => confirmInputRef.current?.focus()}
-              submitBehavior="submit"
-            />
+            <View style={styles.passwordRow}>
+              <TextInput
+                ref={passwordInputRef}
+                style={styles.passwordInput}
+                placeholder="En az 8 karakter"
+                placeholderTextColor={AppColors.textMuted}
+                onChangeText={(t) => {
+                  passwordRef.current = t;
+                  if (mismatch) setMismatch(false);
+                }}
+                secureTextEntry={!showPassword}
+                returnKeyType="next"
+                onSubmitEditing={() => confirmInputRef.current?.focus()}
+                submitBehavior="submit"
+              />
+              <TouchableOpacity
+                style={styles.eyeBtn}
+                onPress={() => setShowPassword((v) => !v)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={22}
+                  color={AppColors.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.passwordHints}>
+              <Text style={styles.hintItem}>• En az 8 karakter olmalı</Text>
+              <Text style={styles.hintItem}>• Harf ve rakam karışımı önerilir</Text>
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Şifre Tekrar</Text>
-            <TextInput
-              ref={confirmInputRef}
-              style={[styles.input, mismatch && styles.inputError]}
-              placeholder="Şifrenizi tekrar girin"
-              placeholderTextColor={AppColors.textMuted}
-              onChangeText={(t) => {
-                confirmRef.current = t;
-                setMismatch(t.length > 0 && t !== passwordRef.current);
-              }}
-              secureTextEntry
-              autoComplete="new-password"
-              textContentType="newPassword"
-              returnKeyType="done"
-              onSubmitEditing={handleRegister}
-            />
+            <View style={[styles.passwordRow, mismatch && styles.passwordRowError]}>
+              <TextInput
+                ref={confirmInputRef}
+                style={styles.passwordInput}
+                placeholder="Şifrenizi tekrar girin"
+                placeholderTextColor={AppColors.textMuted}
+                onChangeText={(t) => {
+                  confirmRef.current = t;
+                  setMismatch(t.length > 0 && t !== passwordRef.current);
+                }}
+                secureTextEntry={!showConfirm}
+                returnKeyType="done"
+                onSubmitEditing={handleRegister}
+              />
+              <TouchableOpacity
+                style={styles.eyeBtn}
+                onPress={() => setShowConfirm((v) => !v)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons
+                  name={showConfirm ? 'eye-off-outline' : 'eye-outline'}
+                  size={22}
+                  color={AppColors.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
             {mismatch && (
               <Text style={styles.errorText}>Şifreler eşleşmiyor</Text>
             )}
@@ -227,6 +259,36 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 15,
     color: AppColors.textPrimary,
+  },
+  passwordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: AppColors.surface,
+    borderWidth: 1.5,
+    borderColor: AppColors.border,
+    borderRadius: 12,
+  },
+  passwordRowError: {
+    borderColor: AppColors.error,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: AppColors.textPrimary,
+  },
+  eyeBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  passwordHints: {
+    gap: 3,
+    paddingTop: 2,
+  },
+  hintItem: {
+    fontSize: 12,
+    color: AppColors.textMuted,
   },
   inputError: {
     borderColor: AppColors.error,

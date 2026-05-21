@@ -8,8 +8,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useWords } from '@/src/context/WordContext';
@@ -17,7 +17,7 @@ import { AppColors } from '@/src/constants/colors';
 
 export default function AddWordScreen() {
   const { listId } = useLocalSearchParams<{ listId: string }>();
-  const { addWord, isGenerating } = useWords();
+  const { addWord } = useWords();
   const wordRef = useRef('');
   const meaningRef = useRef('');
   const meaningInputRef = useRef<TextInput>(null);
@@ -35,11 +35,15 @@ export default function AddWordScreen() {
       return;
     }
     setLoading(true);
-    await addWord(word, meaning, listId);
-    router.back();
+    try {
+      await addWord(word, meaning, listId);
+      router.back();
+    } catch {
+      Alert.alert('Hata', 'Kelime eklenirken bir sorun oluştu.');
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const canAdd = !loading && !isGenerating;
 
   return (
     <KeyboardAvoidingView
@@ -68,9 +72,6 @@ export default function AddWordScreen() {
               onChangeText={(t) => { wordRef.current = t; }}
               autoCapitalize="none"
               autoFocus
-              returnKeyType="next"
-              onSubmitEditing={() => meaningInputRef.current?.focus()}
-              submitBehavior="submit"
             />
           </View>
 
@@ -82,31 +83,19 @@ export default function AddWordScreen() {
               placeholder="örn: tesadüfen güzel şeyler keşfetme"
               placeholderTextColor={AppColors.textMuted}
               onChangeText={(t) => { meaningRef.current = t; }}
-              returnKeyType="done"
-              onSubmitEditing={handleAdd}
+              autoCapitalize="none"
+              spellCheck={false}
             />
-          </View>
-
-          <View style={styles.aiNote}>
-            <Text style={styles.aiNoteIcon}>🤖</Text>
-            <Text style={styles.aiNoteText}>
-              Kelime eklendikten sonra yapay zeka otomatik olarak bir örnek cümle oluşturacak.
-            </Text>
           </View>
         </View>
 
         <TouchableOpacity
-          style={[styles.addBtn, !canAdd && styles.addBtnDisabled]}
+          style={[styles.addBtn, loading && styles.addBtnDisabled]}
           onPress={handleAdd}
-          disabled={!canAdd}
+          disabled={loading}
           activeOpacity={0.85}
         >
-          {isGenerating ? (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator color="#fff" size="small" />
-              <Text style={styles.addBtnText}>Cümle üretiliyor...</Text>
-            </View>
-          ) : loading ? (
+          {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.addBtnText}>Kelime Ekle</Text>
@@ -173,25 +162,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: AppColors.textPrimary,
   },
-  aiNote: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFBEB',
-    borderRadius: 12,
-    padding: 14,
-    gap: 10,
-    alignItems: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  aiNoteIcon: {
-    fontSize: 18,
-  },
-  aiNoteText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#92400E',
-    lineHeight: 18,
-  },
   addBtn: {
     backgroundColor: AppColors.primary,
     borderRadius: 14,
@@ -200,16 +170,11 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   addBtnDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
   addBtnText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'center',
   },
 });

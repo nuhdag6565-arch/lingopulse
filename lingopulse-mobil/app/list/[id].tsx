@@ -1,5 +1,6 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useWords } from '@/src/context/WordContext';
 import { WordCard } from '@/src/components/WordCard';
 import { EmptyState } from '@/src/components/EmptyState';
@@ -7,7 +8,13 @@ import { AppColors } from '@/src/constants/colors';
 
 export default function ListDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { getList, getListWords, deleteWord } = useWords();
+  const { getList, getListWords, loadListWords, isLoadingWords, deleteWord } = useWords();
+
+  useFocusEffect(
+    useCallback(() => {
+      if (id) loadListWords(id);
+    }, [id, loadListWords]),
+  );
 
   const list = getList(id);
   const words = getListWords(id);
@@ -15,6 +22,11 @@ export default function ListDetailScreen() {
   if (!list) {
     return (
       <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Text style={styles.backText}>‹</Text>
+          </TouchableOpacity>
+        </View>
         <EmptyState icon="❓" title="Liste bulunamadı" description="Bu liste silinmiş olabilir." />
       </View>
     );
@@ -33,7 +45,11 @@ export default function ListDetailScreen() {
         <View style={styles.headerRight} />
       </View>
 
-      {words.length === 0 ? (
+      {isLoadingWords && words.length === 0 ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={AppColors.primary} />
+        </View>
+      ) : words.length === 0 ? (
         <EmptyState
           icon="✏️"
           title="Bu listede kelime yok"
@@ -71,6 +87,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: AppColors.background,
     paddingTop: 60,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   header: {
     flexDirection: 'row',

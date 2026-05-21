@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useWords, type Word } from '@/src/context/WordContext';
 import { FlashCard } from '@/src/components/FlashCard';
@@ -8,10 +8,11 @@ import { EmptyState } from '@/src/components/EmptyState';
 import { AppColors } from '@/src/constants/colors';
 
 export default function ReviewScreen() {
-  const { getDueWords, reviewWord } = useWords();
+  const { loadDueWords, reviewWord } = useWords();
   const [queue, setQueue] = useState<Word[]>([]);
   const [revealed, setRevealed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [sessionTotal, setSessionTotal] = useState(0);
   const [sessionDone, setSessionDone] = useState(0);
   const [finished, setFinished] = useState(false);
@@ -19,13 +20,19 @@ export default function ReviewScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      const due = getDueWords();
-      setQueue(due);
-      setSessionTotal(due.length);
-      setSessionDone(0);
-      setFinished(false);
-      setRevealed(false);
-    }, [getDueWords])
+      let active = true;
+      setLoading(true);
+      loadDueWords().then((due) => {
+        if (!active) return;
+        setQueue(due);
+        setSessionTotal(due.length);
+        setSessionDone(0);
+        setFinished(false);
+        setRevealed(false);
+        setLoading(false);
+      });
+      return () => { active = false; };
+    }, [loadDueWords]),
   );
 
   const advance = (nextQueue: Word[]) => {
@@ -43,14 +50,14 @@ export default function ReviewScreen() {
   const handleKnew = async () => {
     if (!queue[0]) return;
     setSubmitting(true);
-    reviewWord(queue[0].id, true);
+    await reviewWord(queue[0].id, true);
     advance(queue.slice(1));
   };
 
   const handleDidNotKnow = async () => {
     if (!queue[0]) return;
     setSubmitting(true);
-    reviewWord(queue[0].id, false);
+    await reviewWord(queue[0].id, false);
     setRevealed(true);
     setSubmitting(false);
   };
@@ -58,6 +65,14 @@ export default function ReviewScreen() {
   const handleContinue = () => {
     advance(queue.slice(1));
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color={AppColors.primary} />
+      </View>
+    );
+  }
 
   if (finished || (sessionTotal > 0 && queue.length === 0)) {
     return (
@@ -120,6 +135,10 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.background,
     paddingTop: 60,
     paddingHorizontal: 20,
+  },
+  center: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   header: {
     flexDirection: 'row',

@@ -1,5 +1,5 @@
-"""Kullanıcı kaydı, giriş ve token yenileme iş mantığı."""
-
+import random
+import string
 from datetime import datetime, timezone
 
 from jose import JWTError
@@ -11,8 +11,14 @@ from app.core.security import (
     verify_password,
     decode_token,
 )
+from app.core.email import send_reset_email
 from app.domain.models.user import User
+from app.domain.models.password_reset import PasswordResetCode
 from app.domain.schemas.auth import RegisterRequest, TokenResponse
+
+
+def _generate_code(length: int = 6) -> str:
+    return "".join(random.choices(string.digits, k=length))
 
 
 class AuthService:
@@ -68,3 +74,35 @@ class AuthService:
         if not user or not user.is_active:
             raise ValueError("Kullanıcı bulunamadı.")
         return user
+
+    async def forgot_password(self, email: str) -> None:
+        # Kullanıcı yoksa sessizce geç — e-posta numaralandırmasını önle
+        user = await User.find_one(User.email == email)
+        if not user or not user.is_active:
+            return
+
+        # Önceki kodları temizle
+        await PasswordResetCode.find(PasswordResetCode.email == email).delete()
+
+        code = _generate_code()
+        await PasswordResetCode(email=email, code=code).save()
+        send_reset_email(email, code)
+
+    async def reset_password(self, email: str, code: str, new_password: str) -> None:
+        record = await PasswordResetCode.find_one(
+            PasswordResetCode.email == email,
+            PasswordResetCode.code == code,
+        )
+        if record is None:
+            raise ValueError("Kod hatalı veya geçersiz.")
+        if record.expires_at < datetime.now(timezone.utc):
+            await record.delete()
+            raise ValueError("Kodun süresi dolmuş. Lütfen yeni kod isteyin.")
+
+        user = await User.find_one(User.email == email)
+        if not user:
+            raise ValueError("Kullanıcı bulunamadı.")
+
+        user.hashed_password = hash_password(new_password)
+        await user.save()
+        await record.delete()

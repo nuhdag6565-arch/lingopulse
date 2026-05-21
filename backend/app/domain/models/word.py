@@ -1,22 +1,16 @@
 from datetime import datetime, timezone
-from typing import Annotated, Optional
+from typing import Annotated
 
 from beanie import Document, Indexed
-from bson import ObjectId
 from pydantic import Field
 
 
 class Word(Document):
-    """MongoDB document for a vocabulary entry — her kelime bir kullanıcıya aittir."""
-
-    user_id: str  # User.id string olarak saklanır (ObjectId str)
-    list_id: str | None = None  # WordList.id — None ise sahipsiz kelime
+    user_id: str
+    list_id: str | None = None
     word: Annotated[str, Indexed()]
     meaning: str
-    example_sentence: str = ""
-    example_sentence_translation: str = ""
 
-    # Spaced repetition (SM-2)
     learning_level: int = Field(default=0, ge=0, le=5)
     ease_factor: float = Field(default=2.5, ge=1.3)
     interval_days: int = Field(default=1, ge=1)

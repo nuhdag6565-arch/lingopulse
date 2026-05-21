@@ -11,6 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { Link, router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/context/AuthContext';
 import { AppColors } from '@/src/constants/colors';
 
@@ -20,6 +21,7 @@ export default function LoginScreen() {
   const passwordRef = useRef('');
   const passwordInputRef = useRef<TextInput>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     const email = emailRef.current.trim();
@@ -32,8 +34,13 @@ export default function LoginScreen() {
     try {
       await login(email, password);
       router.replace('/(tabs)');
-    } catch {
-      Alert.alert('Giriş Başarısız', 'E-posta veya şifre hatalı.');
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 401) {
+        Alert.alert('Giriş Başarısız', 'E-posta veya şifre hatalı.');
+      } else {
+        Alert.alert('Giriş Başarısız', 'Bağlantı hatası. Sunucuya ulaşılamıyor.');
+      }
     } finally {
       setLoading(false);
     }
@@ -60,8 +67,6 @@ export default function LoginScreen() {
               onChangeText={(t) => { emailRef.current = t; }}
               keyboardType="email-address"
               autoCapitalize="none"
-              autoComplete="email"
-              textContentType="emailAddress"
               returnKeyType="next"
               onSubmitEditing={() => passwordInputRef.current?.focus()}
               submitBehavior="submit"
@@ -70,19 +75,37 @@ export default function LoginScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Şifre</Text>
-            <TextInput
-              ref={passwordInputRef}
-              style={styles.input}
-              placeholder="••••••••"
-              placeholderTextColor={AppColors.textMuted}
-              onChangeText={(t) => { passwordRef.current = t; }}
-              secureTextEntry
-              autoComplete="password"
-              textContentType="password"
-              returnKeyType="done"
-              onSubmitEditing={handleLogin}
-            />
+            <View style={styles.passwordRow}>
+              <TextInput
+                ref={passwordInputRef}
+                style={styles.passwordInput}
+                placeholder="••••••••"
+                placeholderTextColor={AppColors.textMuted}
+                onChangeText={(t) => { passwordRef.current = t; }}
+                secureTextEntry={!showPassword}
+                returnKeyType="done"
+                onSubmitEditing={handleLogin}
+              />
+              <TouchableOpacity
+                style={styles.eyeBtn}
+                onPress={() => setShowPassword((v) => !v)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={22}
+                  color={AppColors.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
+
+          <TouchableOpacity
+            onPress={() => router.push('/(auth)/forgot-password' as never)}
+            style={styles.forgotRow}
+          >
+            <Text style={styles.forgotText}>Şifremi unuttum</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
@@ -157,12 +180,40 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: AppColors.textPrimary,
   },
+  passwordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: AppColors.surface,
+    borderWidth: 1.5,
+    borderColor: AppColors.border,
+    borderRadius: 12,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: AppColors.textPrimary,
+  },
+  eyeBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  forgotRow: {
+    alignSelf: 'flex-end',
+    marginTop: -4,
+  },
+  forgotText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: AppColors.primary,
+  },
   button: {
     backgroundColor: AppColors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
   buttonDisabled: {
     opacity: 0.6,

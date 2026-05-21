@@ -15,8 +15,6 @@ def _to_response(word) -> WordResponse:
         list_id=word.list_id,
         word=word.word,
         meaning=word.meaning,
-        example_sentence=word.example_sentence,
-        example_sentence_translation=word.example_sentence_translation,
         learning_level=word.learning_level,
         ease_factor=word.ease_factor,
         interval_days=word.interval_days,
@@ -41,7 +39,7 @@ async def list_words(
 
 
 @router.post("/", response_model=WordResponse, status_code=status.HTTP_201_CREATED)
-@limiter.limit("20/minute")
+@limiter.limit("60/minute")
 async def create_word(
     request: Request,
     data: WordCreate,
@@ -96,15 +94,3 @@ async def delete_word(
     deleted = await svc.delete_word(user_id=str(user.id), word_id=word_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Kelime bulunamadı")
-
-
-@router.post("/{word_id}/regenerate-example", response_model=WordResponse)
-async def regenerate_example(
-    word_id: str,
-    svc: WordService = Depends(get_word_service),
-    user: User = Depends(get_current_user),
-):
-    word = await svc.regenerate_example(user_id=str(user.id), word_id=word_id)
-    if word is None:
-        raise HTTPException(status_code=404, detail="Kelime bulunamadı")
-    return _to_response(word)
