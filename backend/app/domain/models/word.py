@@ -10,6 +10,7 @@ class Word(Document):
     """MongoDB document for a vocabulary entry — her kelime bir kullanıcıya aittir."""
 
     user_id: str  # User.id string olarak saklanır (ObjectId str)
+    list_id: str | None = None  # WordList.id — None ise sahipsiz kelime
     word: Annotated[str, Indexed()]
     meaning: str
     example_sentence: str = ""
@@ -28,6 +29,8 @@ class Word(Document):
         name = "words"
         indexes = [
             "user_id",
-            [("user_id", 1), ("next_review_date", 1)],  # tekrar sorgusu için bileşik index
-            [("user_id", 1), ("word", 1)],               # tekrar kelime kontrolü için
+            "list_id",
+            [("user_id", 1), ("next_review_date", 1)],
+            [("user_id", 1), ("word", 1)],
+            [("list_id", 1), ("created_at", -1)],
         ]

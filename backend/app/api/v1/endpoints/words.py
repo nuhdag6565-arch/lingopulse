@@ -12,6 +12,7 @@ router = APIRouter()
 def _to_response(word) -> WordResponse:
     return WordResponse(
         id=str(word.id),
+        list_id=word.list_id,
         word=word.word,
         meaning=word.meaning,
         example_sentence=word.example_sentence,
@@ -28,11 +29,14 @@ def _to_response(word) -> WordResponse:
 @router.get("/", response_model=WordListResponse)
 async def list_words(
     page: int = Query(1, ge=1),
-    size: int = Query(20, ge=1, le=100),
+    size: int = Query(50, ge=1, le=100),
+    list_id: str | None = Query(None),
     svc: WordService = Depends(get_word_service),
     user: User = Depends(get_current_user),
 ):
-    items, total = await svc.word_repo.list_all(user_id=str(user.id), page=page, size=size)
+    items, total = await svc.word_repo.list_all(
+        user_id=str(user.id), page=page, size=size, list_id=list_id
+    )
     return WordListResponse(items=[_to_response(w) for w in items], total=total, page=page, size=size)
 
 

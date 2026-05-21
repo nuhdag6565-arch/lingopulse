@@ -1,7 +1,14 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
+export interface WordList {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
 export interface Word {
   id: string;
+  listId: string;
   word: string;
   meaning: string;
   exampleSentence: string;
@@ -14,9 +21,14 @@ export interface Word {
 }
 
 interface WordContextType {
+  lists: WordList[];
+  createList: (name: string) => void;
+  deleteList: (id: string) => void;
+  getList: (id: string) => WordList | undefined;
+  getListWords: (listId: string) => Word[];
   words: Word[];
   isGenerating: boolean;
-  addWord: (word: string, meaning: string, language?: string) => Promise<void>;
+  addWord: (word: string, meaning: string, listId: string) => Promise<void>;
   deleteWord: (id: string) => void;
   getDueWords: () => Word[];
   reviewWord: (id: string, knew: boolean) => void;
@@ -55,7 +67,6 @@ function calcNextReview(word: Word, knew: boolean): Partial<Word> {
   };
 }
 
-// Simulates AI sentence generation — replace with real API call later
 async function generateSentence(word: string): Promise<string> {
   await new Promise((r) => setTimeout(r, 1200));
   const templates = [
@@ -68,27 +79,56 @@ async function generateSentence(word: string): Promise<string> {
 }
 
 export function WordProvider({ children }: { children: React.ReactNode }) {
+  const [lists, setLists] = useState<WordList[]>([]);
   const [words, setWords] = useState<Word[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const addWord = useCallback(async (word: string, meaning: string, language = 'en-US') => {
-    setIsGenerating(true);
-    const sentence = await generateSentence(word);
-    setIsGenerating(false);
-    const newWord: Word = {
+  const createList = useCallback((name: string) => {
+    const newList: WordList = {
       id: Date.now().toString(),
-      word: word.trim(),
-      meaning: meaning.trim(),
-      exampleSentence: sentence,
-      language,
-      easeFactor: 2.5,
-      intervalDays: 0,
-      nextReviewDate: todayISO(),
-      learningLevel: 0,
+      name: name.trim(),
       createdAt: new Date().toISOString(),
     };
-    setWords((prev) => [newWord, ...prev]);
+    setLists((prev) => [newList, ...prev]);
   }, []);
+
+  const deleteList = useCallback((id: string) => {
+    setLists((prev) => prev.filter((l) => l.id !== id));
+    setWords((prev) => prev.filter((w) => w.listId !== id));
+  }, []);
+
+  const getList = useCallback(
+    (id: string) => lists.find((l) => l.id === id),
+    [lists]
+  );
+
+  const getListWords = useCallback(
+    (listId: string) => words.filter((w) => w.listId === listId),
+    [words]
+  );
+
+  const addWord = useCallback(
+    async (word: string, meaning: string, listId: string) => {
+      setIsGenerating(true);
+      const sentence = await generateSentence(word);
+      setIsGenerating(false);
+      const newWord: Word = {
+        id: Date.now().toString(),
+        listId,
+        word: word.trim(),
+        meaning: meaning.trim(),
+        exampleSentence: sentence,
+        language: 'en-US',
+        easeFactor: 2.5,
+        intervalDays: 0,
+        nextReviewDate: todayISO(),
+        learningLevel: 0,
+        createdAt: new Date().toISOString(),
+      };
+      setWords((prev) => [newWord, ...prev]);
+    },
+    []
+  );
 
   const deleteWord = useCallback((id: string) => {
     setWords((prev) => prev.filter((w) => w.id !== id));
@@ -106,7 +146,21 @@ export function WordProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <WordContext.Provider value={{ words, isGenerating, addWord, deleteWord, getDueWords, reviewWord }}>
+    <WordContext.Provider
+      value={{
+        lists,
+        createList,
+        deleteList,
+        getList,
+        getListWords,
+        words,
+        isGenerating,
+        addWord,
+        deleteWord,
+        getDueWords,
+        reviewWord,
+      }}
+    >
       {children}
     </WordContext.Provider>
   );

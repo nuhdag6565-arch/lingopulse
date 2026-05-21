@@ -4,10 +4,12 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.domain.models.user import User
 from app.services.auth_service import AuthService
 from app.services.word_service import WordService
+from app.services.word_list_service import WordListService
 
 _bearer = HTTPBearer()
 _auth_service = AuthService()
 _word_service = WordService()
+_word_list_service = WordListService()
 
 
 async def get_current_user(
@@ -21,6 +23,10 @@ async def get_current_user(
 
 def get_word_service() -> WordService:
     return _word_service
+
+
+def get_word_list_service() -> WordListService:
+    return _word_list_service
 
 
 def get_auth_service() -> AuthService:

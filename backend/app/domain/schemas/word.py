@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 
 class WordCreate(BaseModel):
+    list_id: str = Field(..., min_length=1)
     word: str = Field(..., min_length=1, max_length=100)
     meaning: str = Field(..., min_length=1, max_length=500)
 
@@ -17,6 +18,7 @@ class WordUpdate(BaseModel):
 
 class WordResponse(BaseModel):
     id: str
+    list_id: str | None
     word: str
     meaning: str
     example_sentence: str

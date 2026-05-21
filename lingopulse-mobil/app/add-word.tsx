@@ -11,11 +11,12 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useWords } from '@/src/context/WordContext';
 import { AppColors } from '@/src/constants/colors';
 
 export default function AddWordScreen() {
+  const { listId } = useLocalSearchParams<{ listId: string }>();
   const { addWord, isGenerating } = useWords();
   const wordRef = useRef('');
   const meaningRef = useRef('');
@@ -29,8 +30,12 @@ export default function AddWordScreen() {
       Alert.alert('Hata', 'Kelime ve anlam alanları zorunludur.');
       return;
     }
+    if (!listId) {
+      Alert.alert('Hata', 'Liste seçilmedi.');
+      return;
+    }
     setLoading(true);
-    await addWord(word, meaning, 'en-US');
+    await addWord(word, meaning, listId);
     router.back();
   };
 

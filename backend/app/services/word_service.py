@@ -20,6 +20,7 @@ class WordService:
         example = await generate_example(data.word, data.meaning)
         word = Word(
             user_id=user_id,
+            list_id=data.list_id,
             word=data.word,
             meaning=data.meaning,
             example_sentence=example.sentence,

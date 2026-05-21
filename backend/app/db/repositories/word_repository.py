@@ -11,17 +11,18 @@ class WordRepository(BaseRepository[Word]):
         super().__init__(Word)
 
     async def list_all(
-        self, user_id: str, page: int = 1, size: int = 20
+        self,
+        user_id: str,
+        page: int = 1,
+        size: int = 50,
+        list_id: str | None = None,
     ) -> tuple[list[Word], int]:
         skip = (page - 1) * size
-        total = await Word.find(Word.user_id == user_id).count()
-        items = (
-            await Word.find(Word.user_id == user_id)
-            .sort(-Word.created_at)
-            .skip(skip)
-            .limit(size)
-            .to_list()
-        )
+        query = Word.find(Word.user_id == user_id)
+        if list_id is not None:
+            query = query.find(Word.list_id == list_id)
+        total = await query.count()
+        items = await query.sort(-Word.created_at).skip(skip).limit(size).to_list()
         return items, total
 
     async def find_due(self, user_id: str, limit: int = 20) -> list[Word]:

@@ -1,72 +1,102 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/src/context/AuthContext';
 import { useWords } from '@/src/context/WordContext';
-import { WordCard } from '@/src/components/WordCard';
 import { EmptyState } from '@/src/components/EmptyState';
 import { AppColors } from '@/src/constants/colors';
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
-  const { words, deleteWord, getDueWords } = useWords();
+  const { lists, deleteList, getListWords, getDueWords } = useWords();
   const dueCount = getDueWords().length;
+
+  const confirmDelete = (id: string, name: string) => {
+    Alert.alert(
+      'Listeyi Sil',
+      `"${name}" listesi ve içindeki tüm kelimeler silinecek. Devam edilsin mi?`,
+      [
+        { text: 'İptal', style: 'cancel' },
+        { text: 'Sil', style: 'destructive', onPress: () => deleteList(id) },
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Merhaba, {user?.fullName?.split(' ')[0] ?? 'Kullanıcı'} 👋</Text>
-          <Text style={styles.subGreeting}>Bugün ne öğreniyoruz?</Text>
+          <Text style={styles.greeting}>
+            Merhaba, {user?.fullName?.split(' ')[0] ?? 'Kullanıcı'} 👋
+          </Text>
+          <Text style={styles.subGreeting}>Kelime listelerim</Text>
         </View>
         <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
           <Text style={styles.logoutText}>Çıkış</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNum}>{words.length}</Text>
-          <Text style={styles.statLabel}>Toplam Kelime</Text>
-        </View>
+      {dueCount > 0 && (
         <TouchableOpacity
-          style={[styles.statCard, styles.reviewCard]}
+          style={styles.reviewBanner}
           onPress={() => router.push('/(tabs)/review')}
           activeOpacity={0.85}
         >
-          <Text style={[styles.statNum, { color: '#fff' }]}>{dueCount}</Text>
-          <Text style={[styles.statLabel, { color: 'rgba(255,255,255,0.8)' }]}>Tekrar Bekliyor</Text>
-          {dueCount > 0 && <Text style={styles.reviewArrow}>→</Text>}
+          <Text style={styles.reviewBannerText}>
+            🔁  {dueCount} kelime tekrar bekliyor
+          </Text>
+          <Text style={styles.reviewBannerArrow}>→</Text>
         </TouchableOpacity>
-      </View>
+      )}
 
-      <View style={styles.listHeader}>
-        <Text style={styles.listTitle}>Kelime Havuzum</Text>
-        <Text style={styles.listCount}>{words.length} kelime</Text>
-      </View>
-
-      {words.length === 0 ? (
+      {lists.length === 0 ? (
         <EmptyState
-          icon="📖"
-          title="Henüz kelime yok"
-          description="İlk kelimeni ekleyerek öğrenmeye başla. Yapay zeka otomatik örnek cümle oluşturacak."
-          actionLabel="+ Kelime Ekle"
-          onAction={() => router.push('/add-word')}
+          icon="📚"
+          title="Henüz listeniz yok"
+          description="İlk kelime listenizi oluşturun ve öğrenmek istediğiniz kelimeleri ekleyin."
+          actionLabel="+ Yeni Liste Oluştur"
+          onAction={() => router.push('/create-list')}
         />
       ) : (
         <FlatList
-          data={words}
+          data={lists}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <WordCard word={item} onDelete={deleteWord} />
-          )}
-          showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => {
+            const wordCount = getListWords(item.id).length;
+            return (
+              <TouchableOpacity
+                style={styles.card}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              onPress={() => router.push(`/list/${item.id}` as any)}
+                activeOpacity={0.88}
+              >
+                <View style={styles.cardLeft}>
+                  <Text style={styles.cardIcon}>📖</Text>
+                  <View>
+                    <Text style={styles.cardName}>{item.name}</Text>
+                    <Text style={styles.cardCount}>{wordCount} kelime</Text>
+                  </View>
+                </View>
+                <View style={styles.cardRight}>
+                  <Text style={styles.cardArrow}>›</Text>
+                  <TouchableOpacity
+                    onPress={() => confirmDelete(item.id, item.name)}
+                    style={styles.deleteBtn}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.deleteIcon}>🗑</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
         />
       )}
 
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => router.push('/add-word')}
+        onPress={() => router.push('/create-list')}
         activeOpacity={0.85}
       >
         <Text style={styles.fabText}>+</Text>
@@ -86,7 +116,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   greeting: {
     fontSize: 22,
@@ -109,63 +139,79 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: AppColors.textSecondary,
   },
-  statsRow: {
+  reviewBanner: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: AppColors.primary,
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    gap: 12,
-    marginBottom: 24,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  statCard: {
-    flex: 1,
+  reviewBannerText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  reviewBannerArrow: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+  },
+  card: {
     backgroundColor: AppColors.surface,
     borderRadius: 16,
-    padding: 16,
+    padding: 18,
+    marginBottom: 10,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     shadowColor: AppColors.cardShadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
     shadowRadius: 8,
     elevation: 3,
   },
-  reviewCard: {
-    backgroundColor: AppColors.primary,
+  cardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    flex: 1,
   },
-  statNum: {
-    fontSize: 32,
-    fontWeight: '800',
+  cardIcon: {
+    fontSize: 28,
+  },
+  cardName: {
+    fontSize: 16,
+    fontWeight: '700',
     color: AppColors.textPrimary,
   },
-  statLabel: {
-    fontSize: 12,
+  cardCount: {
+    fontSize: 13,
     color: AppColors.textSecondary,
     marginTop: 2,
-    fontWeight: '500',
   },
-  reviewArrow: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-  listHeader: {
+  cardRight: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 12,
+    gap: 8,
   },
-  listTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: AppColors.textPrimary,
-  },
-  listCount: {
-    fontSize: 13,
+  cardArrow: {
+    fontSize: 22,
     color: AppColors.textMuted,
+    fontWeight: '300',
   },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
+  deleteBtn: {
+    padding: 4,
+  },
+  deleteIcon: {
+    fontSize: 16,
   },
   fab: {
     position: 'absolute',
