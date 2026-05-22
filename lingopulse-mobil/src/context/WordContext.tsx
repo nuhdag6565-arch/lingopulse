@@ -4,6 +4,7 @@ import { fetchLists, createListApi, deleteListApi, type ApiWordList } from '../a
 import {
   fetchWords,
   fetchDueWords,
+  fetchAllWords,
   createWordApi,
   deleteWordApi,
   submitReviewApi,
@@ -47,6 +48,7 @@ interface WordContextType {
   dueWords: Word[];
   isLoadingDue: boolean;
   loadDueWords: () => Promise<Word[]>;
+  loadAllWords: () => Promise<Word[]>;
   reviewWord: (id: string, knew: boolean) => Promise<void>;
   reset: () => void;
 }
@@ -195,6 +197,16 @@ export function WordProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const loadAllWords = useCallback(async (): Promise<Word[]> => {
+    try {
+      const data = await fetchAllWords();
+      return data.map(mapWord);
+    } catch {
+      Alert.alert('Hata', 'Kelimeler yüklenirken bir sorun oluştu.');
+      return [];
+    }
+  }, []);
+
   const reviewWord = useCallback(async (id: string, knew: boolean) => {
     await submitReviewApi(id, knew);
     setDueWords((prev) => prev.filter((w) => w.id !== id));
@@ -224,6 +236,7 @@ export function WordProvider({ children }: { children: React.ReactNode }) {
         dueWords,
         isLoadingDue,
         loadDueWords,
+        loadAllWords,
         reviewWord,
         reset,
       }}

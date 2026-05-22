@@ -8,13 +8,12 @@ import { AppColors } from '@/src/constants/colors';
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
-  const { lists, isLoadingLists, loadLists, deleteList, dueWords, loadDueWords, reset } = useWords();
+  const { lists, isLoadingLists, loadLists, deleteList, reset } = useWords();
 
   useFocusEffect(
     useCallback(() => {
       loadLists();
-      loadDueWords();
-    }, [loadLists, loadDueWords]),
+    }, [loadLists]),
   );
 
   const handleLogout = async () => {
@@ -56,19 +55,6 @@ export default function HomeScreen() {
           <Text style={styles.logoutText}>Çıkış</Text>
         </TouchableOpacity>
       </View>
-
-      {dueWords.length > 0 && (
-        <TouchableOpacity
-          style={styles.reviewBanner}
-          onPress={() => router.push('/(tabs)/review')}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.reviewBannerText}>
-            🔁  {dueWords.length} kelime tekrar bekliyor
-          </Text>
-          <Text style={styles.reviewBannerArrow}>→</Text>
-        </TouchableOpacity>
-      )}
 
       {isLoadingLists && lists.length === 0 ? (
         <View style={styles.center}>
@@ -166,27 +152,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: AppColors.textSecondary,
-  },
-  reviewBanner: {
-    marginHorizontal: 20,
-    marginBottom: 16,
-    backgroundColor: AppColors.primary,
-    borderRadius: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 13,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  reviewBannerText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  reviewBannerArrow: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
   },
   listContent: {
     paddingHorizontal: 20,

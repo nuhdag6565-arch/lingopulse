@@ -1,14 +1,17 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useWords } from '@/src/context/WordContext';
 import { WordCard } from '@/src/components/WordCard';
 import { EmptyState } from '@/src/components/EmptyState';
+import { OxfordPickerModal } from '@/src/components/OxfordPickerModal';
 import { AppColors } from '@/src/constants/colors';
 
 export default function ListDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { getList, getListWords, loadListWords, isLoadingWords, deleteWord } = useWords();
+  const [oxfordVisible, setOxfordVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -38,11 +41,20 @@ export default function ListDetailScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Text style={styles.backText}>‹</Text>
         </TouchableOpacity>
+
         <View style={styles.headerCenter}>
           <Text style={styles.title} numberOfLines={1}>{list.name}</Text>
           <Text style={styles.subtitle}>{words.length} kelime</Text>
         </View>
-        <View style={styles.headerRight} />
+
+        {/* Oxford havuzu butonu */}
+        <TouchableOpacity
+          style={styles.oxfordBtn}
+          onPress={() => setOxfordVisible(true)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="flash" size={18} color={AppColors.primary} />
+        </TouchableOpacity>
       </View>
 
       {isLoadingWords && words.length === 0 ? (
@@ -53,10 +65,9 @@ export default function ListDetailScreen() {
         <EmptyState
           icon="✏️"
           title="Bu listede kelime yok"
-          description="İlk kelimeni ekleyerek çalışmaya başla."
-          actionLabel="+ Kelime Ekle"
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onAction={() => router.push(`/add-word?listId=${id}` as any)}
+          description="Manuel ekle ya da Oxford havuzundan hızlıca seç."
+          actionLabel="⚡ Oxford'dan Seç"
+          onAction={() => setOxfordVisible(true)}
         />
       ) : (
         <FlatList
@@ -70,6 +81,7 @@ export default function ListDetailScreen() {
         />
       )}
 
+      {/* Manuel kelime ekleme FAB */}
       <TouchableOpacity
         style={styles.fab}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -78,6 +90,16 @@ export default function ListDetailScreen() {
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
+
+      {/* Oxford seçici modal */}
+      <OxfordPickerModal
+        visible={oxfordVisible}
+        listId={id}
+        onClose={() => {
+          setOxfordVisible(false);
+          if (id) loadListWords(id);
+        }}
+      />
     </View>
   );
 }
@@ -115,9 +137,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
-  headerRight: {
-    width: 40,
-  },
   title: {
     fontSize: 18,
     fontWeight: '800',
@@ -127,6 +146,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: AppColors.textSecondary,
     marginTop: 2,
+  },
+  oxfordBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: AppColors.surface,
+    borderWidth: 1.5,
+    borderColor: AppColors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listContent: {
     paddingHorizontal: 20,

@@ -1,71 +1,102 @@
 import { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Animated,
+  ActivityIndicator,
+} from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useWords, type Word } from '@/src/context/WordContext';
 import { FlashCard } from '@/src/components/FlashCard';
-import { ReviewButtons } from '@/src/components/ReviewButtons';
 import { EmptyState } from '@/src/components/EmptyState';
 import { AppColors } from '@/src/constants/colors';
 
 export default function ReviewScreen() {
-  const { loadDueWords, reviewWord } = useWords();
+  const { loadAllWords } = useWords();
+
+  // currentWord = kart üzerinde gösterilen kelime
+  // queue = sıradaki kelimeler (currentWord dahil değil)
+  const allRef = useRef<Word[]>([]);
+  const [currentWord, setCurrentWord] = useState<Word | null>(null);
   const [queue, setQueue] = useState<Word[]>([]);
-  const [revealed, setRevealed] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+
+  const [flipped, setFlipped] = useState(false);    // kartın görsel durumu
+  const [revealed, setRevealed] = useState(false);  // "Bilmiyorum" basıldı mı (Devam Et göster)
   const [loading, setLoading] = useState(true);
-  const [sessionTotal, setSessionTotal] = useState(0);
-  const [sessionDone, setSessionDone] = useState(0);
-  const [finished, setFinished] = useState(false);
+
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       setLoading(true);
-      loadDueWords().then((due) => {
+      loadAllWords().then((words) => {
         if (!active) return;
-        setQueue(due);
-        setSessionTotal(due.length);
-        setSessionDone(0);
-        setFinished(false);
+        allRef.current = words;
+        setCurrentWord(words[0] ?? null);
+        setQueue(words.slice(1));
+        setFlipped(false);
         setRevealed(false);
         setLoading(false);
       });
       return () => { active = false; };
-    }, [loadDueWords]),
+    }, [loadAllWords]),
   );
 
-  const advance = (nextQueue: Word[]) => {
-    Animated.sequence([
-      Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
-      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-    ]).start();
-    setQueue(nextQueue);
-    setRevealed(false);
-    setSubmitting(false);
-    setSessionDone((d) => d + 1);
-    if (nextQueue.length === 0) setFinished(true);
-  };
+  // Fade-out → state değiştir → fade-in
+  const nextCard = useCallback(
+    (next: Word | null, rest: Word[]) => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 120,
+        useNativeDriver: true,
+      }).start(() => {
+        setCurrentWord(next);
+        setQueue(rest);
+        setFlipped(false);
+        setRevealed(false);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      });
+    },
+    [fadeAnim],
+  );
 
-  const handleKnew = async () => {
-    if (!queue[0]) return;
-    setSubmitting(true);
-    await reviewWord(queue[0].id, true);
-    advance(queue.slice(1));
-  };
+  // Biliyorum → sıradaki kelimeye geç; liste bittiyse baştan başla
+  const handleKnew = useCallback(() => {
+    if (queue.length === 0) {
+      const all = allRef.current;
+      nextCard(all[0] ?? null, all.slice(1));
+    } else {
+      nextCard(queue[0], queue.slice(1));
+    }
+  }, [queue, nextCard]);
 
-  const handleDidNotKnow = async () => {
-    if (!queue[0]) return;
-    setSubmitting(true);
-    await reviewWord(queue[0].id, false);
+  // Bilmiyorum → Türkçeyi göster, kelimeyi kuyruğun sonuna at
+  const handleDidNotKnow = useCallback(() => {
+    if (!currentWord) return;
+    setQueue((prev) => [...prev, currentWord]);
+    setFlipped(true);
     setRevealed(true);
-    setSubmitting(false);
-  };
+  }, [currentWord]);
 
-  const handleContinue = () => {
-    advance(queue.slice(1));
-  };
+  // Devam Et → Bilmiyorum sonrası sıradaki kelimeye geç
+  const handleContinue = useCallback(() => {
+    // queue'nun başı sıradaki kelime; currentWord zaten sona atıldı
+    nextCard(queue[0] ?? null, queue.slice(1));
+  }, [queue, nextCard]);
 
+  // Karta dokunma → görsel çevirme (queue'ya dokunmaz)
+  const handleTapCard = useCallback(() => {
+    setFlipped((f) => !f);
+  }, []);
+
+  // ─── Yükleniyor ──────────────────────────────────────────────────────────
   if (loading) {
     return (
       <View style={[styles.container, styles.center]}>
@@ -74,56 +105,79 @@ export default function ReviewScreen() {
     );
   }
 
-  if (finished || (sessionTotal > 0 && queue.length === 0)) {
+  // ─── Kelime yok ──────────────────────────────────────────────────────────
+  if (!currentWord) {
     return (
       <View style={styles.container}>
         <EmptyState
-          icon="🎉"
-          title="Oturum Tamamlandı!"
-          description={`Bugün ${sessionDone} kelimeyi tekrar ettin. Harika iş!`}
+          icon="📚"
+          title="Kelime bulunamadı"
+          description="Önce bir listeye kelime ekle, sonra tekrar sekmesine geri dön."
         />
       </View>
     );
   }
 
-  if (sessionTotal === 0 || queue.length === 0) {
-    return (
-      <View style={styles.container}>
-        <EmptyState
-          icon="✅"
-          title="Bugün tamamlandı!"
-          description="Bugün tekrar edilecek kelime kalmadı. Yarın yeni kelimeler seni bekliyor."
-        />
-      </View>
-    );
-  }
-
-  const current = queue[0];
-  const progress = sessionTotal > 0 ? sessionDone / sessionTotal : 0;
+  const total = allRef.current.length;
+  const remaining = queue.length + 1; // current + sıradakiler
 
   return (
     <View style={styles.container}>
+      {/* Başlık */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Tekrar</Text>
-        <Text style={styles.counter}>{sessionDone + 1} / {sessionTotal}</Text>
+        <Text style={styles.counter}>{remaining} / {total}</Text>
       </View>
 
+      {/* İlerleme çubuğu */}
       <View style={styles.progressBar}>
-        <Animated.View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+        <View
+          style={[
+            styles.progressFill,
+            { width: `${((total - remaining) / Math.max(total, 1)) * 100}%` },
+          ]}
+        />
       </View>
 
+      {/* Kart — dokunulabilir */}
       <Animated.View style={[styles.cardWrapper, { opacity: fadeAnim }]}>
-        <FlashCard key={current.id} word={current} revealed={revealed} />
+        <TouchableOpacity
+          onPress={handleTapCard}
+          activeOpacity={0.97}
+          style={styles.cardTouch}
+        >
+          <FlashCard key={currentWord.id} word={currentWord} revealed={flipped} />
+        </TouchableOpacity>
       </Animated.View>
 
+      {/* Butonlar */}
       <View style={styles.buttonsWrapper}>
-        <ReviewButtons
-          revealed={revealed}
-          loading={submitting}
-          onKnew={handleKnew}
-          onDidNotKnow={handleDidNotKnow}
-          onContinue={handleContinue}
-        />
+        {revealed ? (
+          <TouchableOpacity
+            style={styles.continueBtn}
+            onPress={handleContinue}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.continueBtnText}>Devam Et →</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.row}>
+            <TouchableOpacity
+              style={[styles.btn, styles.noBtn]}
+              onPress={handleDidNotKnow}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.noText}>✗  Bilmiyorum</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.btn, styles.yesBtn]}
+              onPress={handleKnew}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.yesText}>✓  Biliyorum</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -172,8 +226,48 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  cardTouch: {
+    width: '100%',
+  },
   buttonsWrapper: {
     paddingBottom: 32,
     paddingTop: 16,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  btn: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  noBtn: {
+    backgroundColor: '#FEE2E2',
+  },
+  yesBtn: {
+    backgroundColor: '#D1FAE5',
+  },
+  noText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  yesText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  continueBtn: {
+    backgroundColor: AppColors.primary,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  continueBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

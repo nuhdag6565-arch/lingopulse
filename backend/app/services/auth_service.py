@@ -1,8 +1,12 @@
+import asyncio
+import logging
 import random
 import string
 from datetime import datetime, timezone
 
 from jose import JWTError
+
+logger = logging.getLogger(__name__)
 
 from app.core.security import (
     create_access_token,
@@ -17,7 +21,7 @@ from app.domain.models.password_reset import PasswordResetCode
 from app.domain.schemas.auth import RegisterRequest, TokenResponse
 
 
-def _generate_code(length: int = 6) -> str:
+def _generate_code(length: int = 4) -> str:
     return "".join(random.choices(string.digits, k=length))
 
 
@@ -86,7 +90,12 @@ class AuthService:
 
         code = _generate_code()
         await PasswordResetCode(email=email, code=code).save()
-        send_reset_email(email, code)
+        try:
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, send_reset_email, email, code)
+        except Exception as exc:
+            # E-posta gönderilemese de kod kaydedildi; loglayıp devam et
+            logger.error("Sıfırlama e-postası gönderilemedi (%s): %s", email, exc)
 
     async def reset_password(self, email: str, code: str, new_password: str) -> None:
         record = await PasswordResetCode.find_one(

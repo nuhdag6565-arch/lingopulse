@@ -47,7 +47,7 @@ export function FlashCard({ word, revealed }: Props) {
           <TTSButton text={word.word} language={word.language} size={20} />
           <Text style={styles.ttsHint}>seslendirmek için dokun</Text>
         </View>
-        <Text style={styles.flipHint}>«  Anlamını görmek için Bilmiyorum'a bas  »</Text>
+        <Text style={styles.flipHint}>Karta dokun veya aşağıdan seç</Text>
       </Animated.View>
 
       {/* BACK */}

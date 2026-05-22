@@ -58,8 +58,8 @@ export default function ForgotPasswordScreen() {
     const newPassword = newPasswordRef.current;
     const confirmPassword = confirmPasswordRef.current;
 
-    if (!code || code.length !== 6) {
-      Alert.alert('Hata', '6 haneli kodu eksiksiz girin.');
+    if (!code || code.length !== 4) {
+      Alert.alert('Hata', '4 haneli kodu eksiksiz girin.');
       return;
     }
     if (newPassword.length < 8) {
@@ -154,20 +154,20 @@ export default function ForgotPasswordScreen() {
             <Text style={styles.title}>Kodu Girin</Text>
             <Text style={styles.description}>
               <Text style={styles.emailHighlight}>{sentEmail.current}</Text>
-              {' '}adresine gönderilen 6 haneli kodu ve yeni şifrenizi girin.{'\n'}
+              {' '}adresine gönderilen 4 haneli kodu ve yeni şifrenizi girin.{'\n'}
               <Text style={styles.hint}>Gelen kutunuzu ve spam klasörünüzü kontrol edin.</Text>
             </Text>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>6 Haneli Kod</Text>
+              <Text style={styles.label}>4 Haneli Kod</Text>
               <TextInput
                 ref={codeInputRef}
                 style={[styles.input, styles.codeInput]}
-                placeholder="000000"
+                placeholder="0000"
                 placeholderTextColor={AppColors.textMuted}
                 onChangeText={(t) => { codeRef.current = t; }}
                 keyboardType="number-pad"
-                maxLength={6}
+                maxLength={4}
                 returnKeyType="next"
                 onSubmitEditing={() => passwordInputRef.current?.focus()}
                 submitBehavior="submit"

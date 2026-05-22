@@ -36,6 +36,11 @@ export async function deleteWordApi(id: string): Promise<void> {
   await api.delete(`/words/${id}`);
 }
 
+export async function fetchAllWords(): Promise<ApiWord[]> {
+  const { data } = await api.get('/words/', { params: { size: 200 } });
+  return data.items;
+}
+
 export async function submitReviewApi(wordId: string, knewIt: boolean): Promise<void> {
   await api.post('/reviews/', { word_id: wordId, knew_it: knewIt });
 }
