@@ -1,14 +1,21 @@
 import { useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/context/AuthContext';
 import { useWords } from '@/src/context/WordContext';
-import { EmptyState } from '@/src/components/EmptyState';
 import { AppColors } from '@/src/constants/colors';
 
-export default function HomeScreen() {
-  const { user, logout } = useAuth();
-  const { lists, isLoadingLists, loadLists, deleteList, reset } = useWords();
+export default function DashboardScreen() {
+  const { user } = useAuth();
+  const { lists, isLoadingLists, loadLists } = useWords();
 
   useFocusEffect(
     useCallback(() => {
@@ -16,101 +23,127 @@ export default function HomeScreen() {
     }, [loadLists]),
   );
 
-  const handleLogout = async () => {
-    reset();
-    await logout();
-  };
-
-  const confirmDelete = (id: string, name: string) => {
-    Alert.alert(
-      'Listeyi Sil',
-      `"${name}" listesi ve içindeki tüm kelimeler silinecek. Devam edilsin mi?`,
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteList(id);
-            } catch {
-              Alert.alert('Hata', 'Liste silinemedi.');
-            }
-          },
-        },
-      ],
-    );
-  };
+  const firstName = user?.fullName?.split(' ')[0] ?? 'Kullanıcı';
+  const totalWords = lists.reduce((sum, l) => sum + l.wordCount, 0);
+  const recentLists = lists.slice(0, 3);
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scroll}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Karşılama */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>
-            Merhaba, {user?.fullName?.split(' ')[0] ?? 'Kullanıcı'} 👋
-          </Text>
-          <Text style={styles.subGreeting}>Kelime listelerim</Text>
+          <Text style={styles.greeting}>Merhaba, {firstName} 👋</Text>
+          <Text style={styles.subGreeting}>Bugün ne öğrenmek istersin?</Text>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-          <Text style={styles.logoutText}>Çıkış</Text>
-        </TouchableOpacity>
+        <View style={styles.logoChip}>
+          <Text style={styles.logoText}>LP</Text>
+        </View>
       </View>
 
+      {/* İstatistik kartları */}
       {isLoadingLists && lists.length === 0 ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={AppColors.primary} />
+        <View style={styles.loadingRow}>
+          <ActivityIndicator color={AppColors.primary} />
         </View>
-      ) : lists.length === 0 ? (
-        <EmptyState
-          icon="📚"
-          title="Henüz listeniz yok"
-          description="İlk kelime listenizi oluşturun ve öğrenmek istediğiniz kelimeleri ekleyin."
-          actionLabel="+ Yeni Liste Oluştur"
-          onAction={() => router.push('/create-list')}
-        />
       ) : (
-        <FlatList
-          data={lists}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
+        <View style={styles.statsRow}>
+          <View style={[styles.statCard, { backgroundColor: '#EEF2FF' }]}>
+            <Ionicons name="library" size={22} color={AppColors.primary} />
+            <Text style={styles.statValue}>{lists.length}</Text>
+            <Text style={styles.statLabel}>Liste</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: '#D1FAE5' }]}>
+            <Ionicons name="text" size={22} color="#059669" />
+            <Text style={[styles.statValue, { color: '#059669' }]}>{totalWords}</Text>
+            <Text style={[styles.statLabel, { color: '#065F46' }]}>Kelime</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Tekrar Başlat butonu */}
+      <TouchableOpacity
+        style={styles.reviewBtn}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onPress={() => router.push('/(tabs)/review' as any)}
+        activeOpacity={0.85}
+      >
+        <View style={styles.reviewBtnLeft}>
+          <Ionicons name="play-circle" size={28} color="#fff" />
+          <View>
+            <Text style={styles.reviewBtnTitle}>Tekrar Başlat</Text>
+            <Text style={styles.reviewBtnSub}>
+              {totalWords > 0 ? `${totalWords} kelime seni bekliyor` : 'Kelime ekleyerek başla'}
+            </Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.8)" />
+      </TouchableOpacity>
+
+      {/* Son Listeler */}
+      {recentLists.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Son Listeler</Text>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/lists' as any)}>
+              <Text style={styles.seeAll}>Tümünü Gör →</Text>
+            </TouchableOpacity>
+          </View>
+          {recentLists.map((item) => (
             <TouchableOpacity
-              style={styles.card}
+              key={item.id}
+              style={styles.listCard}
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onPress={() => router.push(`/list/${item.id}` as any)}
               activeOpacity={0.88}
             >
-              <View style={styles.cardLeft}>
-                <Text style={styles.cardIcon}>📖</Text>
-                <View>
-                  <Text style={styles.cardName}>{item.name}</Text>
-                  <Text style={styles.cardCount}>{item.wordCount} kelime</Text>
-                </View>
+              <Text style={styles.listIcon}>📖</Text>
+              <View style={styles.listCardCenter}>
+                <Text style={styles.listName} numberOfLines={1}>{item.name}</Text>
+                <Text style={styles.listCount}>{item.wordCount} kelime</Text>
               </View>
-              <View style={styles.cardRight}>
-                <Text style={styles.cardArrow}>›</Text>
-                <TouchableOpacity
-                  onPress={() => confirmDelete(item.id, item.name)}
-                  style={styles.deleteBtn}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Text style={styles.deleteIcon}>🗑</Text>
-                </TouchableOpacity>
-              </View>
+              <Ionicons name="chevron-forward" size={18} color={AppColors.textMuted} />
             </TouchableOpacity>
-          )}
-        />
+          ))}
+        </View>
       )}
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/create-list')}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
-    </View>
+      {/* Hızlı aksiyonlar */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Hızlı Erişim</Text>
+        <View style={styles.quickRow}>
+          <TouchableOpacity
+            style={styles.quickCard}
+            onPress={() => router.push('/create-list')}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add-circle-outline" size={24} color={AppColors.primary} />
+            <Text style={styles.quickLabel}>Yeni Liste</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickCard}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            onPress={() => router.push('/(tabs)/lists' as any)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="library-outline" size={24} color={AppColors.primary} />
+            <Text style={styles.quickLabel}>Listelerim</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickCard}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            onPress={() => router.push('/(tabs)/profile' as any)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="person-outline" size={24} color={AppColors.primary} />
+            <Text style={styles.quickLabel}>Profilim</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ScrollView>
   );
 }
 
@@ -118,19 +151,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: AppColors.background,
-    paddingTop: 60,
   },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  scroll: {
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    alignItems: 'center',
+    marginBottom: 24,
   },
   greeting: {
     fontSize: 22,
@@ -140,92 +171,140 @@ const styles = StyleSheet.create({
   subGreeting: {
     fontSize: 14,
     color: AppColors.textSecondary,
-    marginTop: 2,
+    marginTop: 3,
   },
-  logoutBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    backgroundColor: AppColors.border,
-    borderRadius: 20,
+  logoChip: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: AppColors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  logoutText: {
+  logoText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  loadingRow: {
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  statCard: {
+    flex: 1,
+    borderRadius: 16,
+    padding: 16,
+    gap: 6,
+    alignItems: 'flex-start',
+  },
+  statValue: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: AppColors.primary,
+  },
+  statLabel: {
     fontSize: 13,
     fontWeight: '600',
     color: AppColors.textSecondary,
   },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
-  },
-  card: {
-    backgroundColor: AppColors.surface,
-    borderRadius: 16,
+  reviewBtn: {
+    backgroundColor: AppColors.primary,
+    borderRadius: 18,
     padding: 18,
-    marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: AppColors.cardShadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 3,
+    marginBottom: 28,
+    shadowColor: AppColors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 8,
   },
-  cardLeft: {
+  reviewBtnLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
+  },
+  reviewBtnTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  reviewBtnSub: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: AppColors.textPrimary,
+  },
+  seeAll: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: AppColors.primary,
+  },
+  listCard: {
+    backgroundColor: AppColors.surface,
+    borderRadius: 14,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+  },
+  listIcon: {
+    fontSize: 22,
+  },
+  listCardCenter: {
     flex: 1,
   },
-  cardIcon: {
-    fontSize: 28,
-  },
-  cardName: {
-    fontSize: 16,
+  listName: {
+    fontSize: 15,
     fontWeight: '700',
     color: AppColors.textPrimary,
   },
-  cardCount: {
-    fontSize: 13,
+  listCount: {
+    fontSize: 12,
     color: AppColors.textSecondary,
     marginTop: 2,
   },
-  cardRight: {
+  quickRow: {
     flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
+  quickCard: {
+    flex: 1,
+    backgroundColor: AppColors.surface,
+    borderRadius: 14,
+    paddingVertical: 16,
     alignItems: 'center',
     gap: 8,
+    borderWidth: 1,
+    borderColor: AppColors.border,
   },
-  cardArrow: {
-    fontSize: 22,
-    color: AppColors.textMuted,
-    fontWeight: '300',
-  },
-  deleteBtn: {
-    padding: 4,
-  },
-  deleteIcon: {
-    fontSize: 16,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 90,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: AppColors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: AppColors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  fabText: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '300',
-    lineHeight: 32,
+  quickLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
   },
 });

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { TouchableOpacity, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import * as Speech from 'expo-speech';
 import { AppColors } from '@/src/constants/colors';
+import { useTTS } from '@/src/context/TTSContext';
 
 interface Props {
   text: string;
@@ -11,6 +12,7 @@ interface Props {
 
 export function TTSButton({ text, language = 'en-US', size = 20 }: Props) {
   const [speaking, setSpeaking] = useState(false);
+  const { ttsRate } = useTTS();
 
   const handlePress = () => {
     if (speaking) {
@@ -21,7 +23,7 @@ export function TTSButton({ text, language = 'en-US', size = 20 }: Props) {
     setSpeaking(true);
     Speech.speak(text, {
       language,
-      rate: 0.82,
+      rate: ttsRate,
       onDone: () => setSpeaking(false),
       onError: () => setSpeaking(false),
     });
