@@ -6,12 +6,8 @@ echo ==========================================
 echo   LingoPulse Gelistirme Ortami
 echo ==========================================
 
-:: Mevcut Wi-Fi IP adresini bul
-for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr "IPv4" ^| findstr /v "127.0.0.1"') do (
-    set RAW_IP=%%a
-)
-:: Baştaki ve sondaki boşlukları temizle
-for /f "tokens=* delims= " %%b in ("%RAW_IP%") do set CURRENT_IP=%%b
+:: Mevcut DHCP IP adresini PowerShell ile bul (daha guvenilir)
+for /f "usebackq" %%i in (`powershell -NoProfile -Command "(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.*' -and $_.PrefixOrigin -eq 'Dhcp' } | Select-Object -First 1).IPAddress"`) do set CURRENT_IP=%%i
 
 echo [1/3] Mevcut IP: %CURRENT_IP%
 

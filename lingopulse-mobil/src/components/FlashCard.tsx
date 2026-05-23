@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import { View, Text, Animated, StyleSheet } from 'react-native';
+import { View, Text, Animated, StyleSheet, TouchableOpacity } from 'react-native';
 import { TTSButton } from './TTSButton';
 import { AppColors } from '@/src/constants/colors';
 import type { Word } from '@/src/context/WordContext';
@@ -7,9 +7,18 @@ import type { Word } from '@/src/context/WordContext';
 interface Props {
   word: Word;
   revealed: boolean;
+  onFlip?: () => void;
+  onKnew?: () => void;
+  onDidNotKnow?: () => void;
 }
 
-export function FlashCard({ word, revealed }: Props) {
+const BASE_HEIGHT = 280;
+const BUTTON_EXTRA = 76; // divider + btn row height
+
+export function FlashCard({ word, revealed, onFlip, onKnew, onDidNotKnow }: Props) {
+  const hasButtons = !!(onKnew || onDidNotKnow);
+  const cardHeight = hasButtons ? BASE_HEIGHT + BUTTON_EXTRA : BASE_HEIGHT;
+
   const flipAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -25,46 +34,92 @@ export function FlashCard({ word, revealed }: Props) {
     inputRange: [0, 180],
     outputRange: ['0deg', '180deg'],
   });
-
   const backRotate = flipAnim.interpolate({
     inputRange: [0, 180],
     outputRange: ['180deg', '360deg'],
   });
 
   return (
-    <View style={styles.container}>
-      {/* FRONT */}
+    <View style={[styles.container, { height: cardHeight }]}>
+
+      {/* ── FRONT ── */}
       <Animated.View
         style={[
           styles.card,
-          styles.front,
+          { height: cardHeight },
           { transform: [{ perspective: 1200 }, { rotateY: frontRotate }] },
         ]}
       >
-        <Text style={styles.langTag}>{word.language.toUpperCase()}</Text>
-        <Text style={styles.wordText}>{word.word}</Text>
-        <View style={styles.ttsRow}>
-          <TTSButton text={word.word} language={word.language} size={20} />
-          <Text style={styles.ttsHint}>seslendirmek için dokun</Text>
+        {/* Tap area → flip (does NOT contain TTS or action buttons) */}
+        <TouchableOpacity
+          style={styles.flipZone}
+          onPress={onFlip}
+          activeOpacity={onFlip ? 0.9 : 1}
+          disabled={!onFlip}
+        >
+          <Text style={styles.langTag}>{word.language.toUpperCase()}</Text>
+          <Text style={styles.wordText}>{word.word}</Text>
+          {onFlip && (
+            <Text style={styles.flipHint}>Türkçeyi görmek için dokun</Text>
+          )}
+        </TouchableOpacity>
+
+        {/* TTS — alt-orta, flip zone dışında */}
+        <View style={styles.ttsCenter}>
+          <TTSButton text={word.word} language={word.language} size={22} />
         </View>
-        <Text style={styles.flipHint}>Karta dokun veya aşağıdan seç</Text>
+
+        {/* Biliyorum / Bilmiyorum — kart içinde, en altta */}
+        {hasButtons && (
+          <>
+            <View style={styles.innerDivider} />
+            <View style={styles.frontBtnRow}>
+              <TouchableOpacity
+                style={[styles.frontBtn, styles.noBtn]}
+                onPress={onDidNotKnow}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.noBtnText}>❌  Bilmiyorum</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.frontBtn, styles.yesBtn]}
+                onPress={onKnew}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.yesBtnText}>✅  Biliyorum</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </Animated.View>
 
-      {/* BACK */}
+      {/* ── BACK ── */}
       <Animated.View
         style={[
           styles.card,
           styles.back,
+          { height: cardHeight },
           { transform: [{ perspective: 1200 }, { rotateY: backRotate }] },
         ]}
       >
-        <Text style={styles.wordSmall}>{word.word}</Text>
-        <View style={styles.divider} />
-        <Text style={styles.meaningText}>{word.meaning}</Text>
-        <View style={styles.wordTTSRow}>
+        {/* Tap to flip back */}
+        <TouchableOpacity
+          style={styles.backContent}
+          onPress={onFlip}
+          activeOpacity={onFlip ? 0.9 : 1}
+          disabled={!onFlip}
+        >
+          <Text style={styles.wordSmall}>{word.word}</Text>
+          <View style={styles.divider} />
+          <Text style={styles.meaningText}>{word.meaning}</Text>
+          {onFlip && <Text style={styles.backFlipHint}>İngilizceye dönmek için dokun</Text>}
+        </TouchableOpacity>
+
+        <View style={styles.backTTSRow}>
           <TTSButton text={word.word} language={word.language} size={22} />
         </View>
       </Animated.View>
+
     </View>
   );
 }
@@ -72,30 +127,29 @@ export function FlashCard({ word, revealed }: Props) {
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    height: 280,
   },
   card: {
     position: 'absolute',
     width: '100%',
-    height: '100%',
     backgroundColor: AppColors.surface,
     borderRadius: 24,
-    padding: 28,
     backfaceVisibility: 'hidden',
     shadowColor: AppColors.cardShadow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 1,
     shadowRadius: 20,
     elevation: 8,
+    overflow: 'hidden',
   },
-  front: {
+
+  // ── Front ──────────────────────────────────────────────────────────────────
+  flipZone: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 16,
-  },
-  back: {
-    justifyContent: 'center',
-    gap: 14,
+    paddingHorizontal: 28,
+    paddingTop: 24,
+    gap: 10,
   },
   langTag: {
     fontSize: 11,
@@ -113,23 +167,56 @@ const styles = StyleSheet.create({
     color: AppColors.textPrimary,
     textAlign: 'center',
   },
-  ttsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  ttsHint: {
-    fontSize: 12,
-    color: AppColors.textMuted,
-  },
   flipHint: {
     fontSize: 12,
     color: AppColors.textMuted,
     textAlign: 'center',
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
+  },
+  ttsCenter: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  innerDivider: {
+    height: 1,
+    backgroundColor: AppColors.border,
+    marginHorizontal: 0,
+  },
+  frontBtnRow: {
+    flexDirection: 'row',
+    gap: 0,
+  },
+  frontBtn: {
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noBtn: {
+    borderRightWidth: 0.5,
+    borderRightColor: AppColors.border,
+  },
+  yesBtn: {},
+  noBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  yesBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#059669',
+  },
+
+  // ── Back ───────────────────────────────────────────────────────────────────
+  back: {
+    justifyContent: 'center',
+  },
+  backContent: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+    paddingTop: 24,
+    gap: 14,
   },
   wordSmall: {
     fontSize: 18,
@@ -145,7 +232,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: AppColors.textPrimary,
   },
-  wordTTSRow: {
+  backFlipHint: {
+    fontSize: 12,
+    color: AppColors.textMuted,
+  },
+  backTTSRow: {
     alignSelf: 'flex-end',
+    padding: 16,
   },
 });

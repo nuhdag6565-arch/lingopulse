@@ -25,6 +25,7 @@ export default function RootLayout() {
               <Stack.Screen name="create-list" options={{ presentation: 'modal', headerShown: false }} />
               <Stack.Screen name="add-word" options={{ presentation: 'modal', headerShown: false }} />
               <Stack.Screen name="list/[id]" options={{ headerShown: false }} />
+              <Stack.Screen name="study/[id]" options={{ headerShown: false }} />
               <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
             </Stack>
             <StatusBar style="auto" />

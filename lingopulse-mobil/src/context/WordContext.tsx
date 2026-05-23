@@ -41,7 +41,7 @@ interface WordContextType {
   getList: (id: string) => WordList | undefined;
   listWords: Record<string, Word[]>;
   isLoadingWords: boolean;
-  loadListWords: (listId: string) => Promise<void>;
+  loadListWords: (listId: string) => Promise<Word[]>;
   getListWords: (listId: string) => Word[];
   addWord: (word: string, meaning: string, listId: string) => Promise<void>;
   deleteWord: (id: string) => Promise<void>;
@@ -124,13 +124,16 @@ export function WordProvider({ children }: { children: React.ReactNode }) {
     [lists],
   );
 
-  const loadListWords = useCallback(async (listId: string) => {
+  const loadListWords = useCallback(async (listId: string): Promise<Word[]> => {
     setIsLoadingWords(true);
     try {
       const data = await fetchWords(listId);
-      setListWords((prev) => ({ ...prev, [listId]: data.map(mapWord) }));
+      const mapped = data.map(mapWord);
+      setListWords((prev) => ({ ...prev, [listId]: mapped }));
+      return mapped;
     } catch {
       Alert.alert('Hata', 'Kelimeler yüklenirken bir sorun oluştu.');
+      return [];
     } finally {
       setIsLoadingWords(false);
     }

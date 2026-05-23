@@ -139,15 +139,14 @@ export default function ReviewScreen() {
         />
       </View>
 
-      {/* Kart — dokunulabilir */}
+      {/* Kart */}
       <Animated.View style={[styles.cardWrapper, { opacity: fadeAnim }]}>
-        <TouchableOpacity
-          onPress={handleTapCard}
-          activeOpacity={0.97}
-          style={styles.cardTouch}
-        >
-          <FlashCard key={currentWord.id} word={currentWord} revealed={flipped} />
-        </TouchableOpacity>
+        <FlashCard
+          key={currentWord.id}
+          word={currentWord}
+          revealed={flipped}
+          onFlip={handleTapCard}
+        />
       </Animated.View>
 
       {/* Butonlar */}
@@ -226,9 +225,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  cardTouch: {
-    width: '100%',
-  },
+
   buttonsWrapper: {
     paddingBottom: 32,
     paddingTop: 16,
