@@ -4,21 +4,38 @@ import {
   Text,
   StyleSheet,
   FlatList,
+  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useWords } from '@/src/context/WordContext';
+import { useTTS } from '@/src/context/TTSContext';
+import { useAuth } from '@/src/context/AuthContext';
 import { WordCard } from '@/src/components/WordCard';
 import { EmptyState } from '@/src/components/EmptyState';
 import { OxfordPickerModal } from '@/src/components/OxfordPickerModal';
 import { AppColors } from '@/src/constants/colors';
 
+const SPEED_OPTIONS = ['0.25', '0.5', '0.75', '1.0', '1.25', '1.5', '1.75', '2.0'];
+
 export default function ListDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { getList, getListWords, loadListWords, isLoadingWords, deleteWord } = useWords();
+  const { ttsSpeedValue, setTtsSpeed } = useTTS();
+  const { updatePreferences } = useAuth();
   const [oxfordVisible, setOxfordVisible] = useState(false);
+
+  const handleSpeed = useCallback(async (val: string) => {
+    setTtsSpeed(val);
+    try {
+      await updatePreferences({ ttsSpeed: parseFloat(val) });
+    } catch (e: any) {
+      Alert.alert('Hata', e?.response?.data?.detail ?? e?.message ?? 'Ayar kaydedilemedi.');
+    }
+  }, [setTtsSpeed, updatePreferences]);
 
   useFocusEffect(
     useCallback(() => {
@@ -69,6 +86,32 @@ export default function ListDetailScreen() {
           <Text style={styles.studyBtnCount}>{words.length} kelime</Text>
         </TouchableOpacity>
       )}
+
+      {/* Ses Hızı */}
+      <View style={styles.speedRow}>
+        <Text style={styles.speedLabel}>Ses Hızı</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.speedChips}
+        >
+          {SPEED_OPTIONS.map((val) => {
+            const active = ttsSpeedValue === val;
+            return (
+              <TouchableOpacity
+                key={val}
+                style={[styles.speedChip, active && styles.speedChipActive]}
+                onPress={() => handleSpeed(val)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.speedChipText, active && styles.speedChipTextActive]}>
+                  {val}×
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {/* Kelimeler başlığı */}
       {words.length > 0 && (
@@ -245,6 +288,42 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: 'rgba(255,255,255,0.75)',
+  },
+
+  speedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  speedLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: AppColors.textSecondary,
+    flexShrink: 0,
+  },
+  speedChips: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  speedChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: AppColors.surface,
+    borderWidth: 1.5,
+    borderColor: AppColors.border,
+  },
+  speedChipActive: {
+    backgroundColor: '#EEF2FF',
+    borderColor: AppColors.primary,
+  },
+  speedChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: AppColors.textSecondary,
+  },
+  speedChipTextActive: {
+    color: AppColors.primary,
   },
 
   sectionLabel: {

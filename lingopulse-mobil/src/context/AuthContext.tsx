@@ -1,11 +1,25 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { apiLogin, apiRegister, apiGetMe, type UserResponse } from '../api/auth';
+import {
+  apiLogin,
+  apiRegister,
+  apiGetMe,
+  apiUpdateProfile,
+  apiUpdatePreferences,
+  type UserResponse,
+} from '../api/auth';
+
+export interface UserPreferences {
+  ttsSpeed: number;
+  ttsAccent: string;
+  darkMode: boolean;
+}
 
 interface User {
   id: string;
   fullName: string;
   email: string;
+  preferences: UserPreferences;
 }
 
 interface AuthContextType {
@@ -15,12 +29,23 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (fullName: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (fullName: string) => Promise<void>;
+  updatePreferences: (prefs: Partial<UserPreferences>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 function mapUser(u: UserResponse): User {
-  return { id: u.id, fullName: u.full_name, email: u.email };
+  return {
+    id: u.id,
+    fullName: u.full_name,
+    email: u.email,
+    preferences: {
+      ttsSpeed: u.preferences?.tts_speed ?? 1.0,
+      ttsAccent: u.preferences?.tts_accent ?? 'us',
+      darkMode: u.preferences?.dark_mode ?? false,
+    },
+  };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -67,9 +92,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const updateProfile = useCallback(async (fullName: string) => {
+    const updated = await apiUpdateProfile(fullName);
+    setUser(mapUser(updated));
+  }, []);
+
+  const updatePreferences = useCallback(async (prefs: Partial<UserPreferences>) => {
+    const apiPayload: { tts_speed?: number; tts_accent?: string; dark_mode?: boolean } = {};
+    if (prefs.ttsSpeed !== undefined) apiPayload.tts_speed = prefs.ttsSpeed;
+    if (prefs.ttsAccent !== undefined) apiPayload.tts_accent = prefs.ttsAccent;
+    if (prefs.darkMode !== undefined) apiPayload.dark_mode = prefs.darkMode;
+    const updated = await apiUpdatePreferences(apiPayload);
+    setUser(mapUser(updated));
+  }, []);
+
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: !!user, isLoading, login, register, logout }}
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        register,
+        logout,
+        updateProfile,
+        updatePreferences,
+      }}
     >
       {children}
     </AuthContext.Provider>

@@ -24,6 +24,9 @@ export default function DashboardScreen() {
   );
 
   const firstName = user?.fullName?.split(' ')[0] ?? 'Kullanıcı';
+  const initials = user?.fullName
+    ? user.fullName.split(' ').filter(Boolean).slice(0, 2).map((n) => n[0].toUpperCase()).join('')
+    : 'LP';
   const totalWords = lists.reduce((sum, l) => sum + l.wordCount, 0);
   const recentLists = lists.slice(0, 3);
 
@@ -40,7 +43,7 @@ export default function DashboardScreen() {
           <Text style={styles.subGreeting}>Bugün ne öğrenmek istersin?</Text>
         </View>
         <View style={styles.logoChip}>
-          <Text style={styles.logoText}>LP</Text>
+          <Text style={styles.logoText}>{initials}</Text>
         </View>
       </View>
 
@@ -63,25 +66,6 @@ export default function DashboardScreen() {
           </View>
         </View>
       )}
-
-      {/* Tekrar Başlat butonu */}
-      <TouchableOpacity
-        style={styles.reviewBtn}
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        onPress={() => router.push('/(tabs)/review' as any)}
-        activeOpacity={0.85}
-      >
-        <View style={styles.reviewBtnLeft}>
-          <Ionicons name="play-circle" size={28} color="#fff" />
-          <View>
-            <Text style={styles.reviewBtnTitle}>Tekrar Başlat</Text>
-            <Text style={styles.reviewBtnSub}>
-              {totalWords > 0 ? `${totalWords} kelime seni bekliyor` : 'Kelime ekleyerek başla'}
-            </Text>
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.8)" />
-      </TouchableOpacity>
 
       {/* Son Listeler */}
       {recentLists.length > 0 && (
@@ -111,38 +95,15 @@ export default function DashboardScreen() {
         </View>
       )}
 
-      {/* Hızlı aksiyonlar */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Hızlı Erişim</Text>
-        <View style={styles.quickRow}>
-          <TouchableOpacity
-            style={styles.quickCard}
-            onPress={() => router.push('/create-list')}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="add-circle-outline" size={24} color={AppColors.primary} />
-            <Text style={styles.quickLabel}>Yeni Liste</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickCard}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            onPress={() => router.push('/(tabs)/lists' as any)}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="library-outline" size={24} color={AppColors.primary} />
-            <Text style={styles.quickLabel}>Listelerim</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickCard}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            onPress={() => router.push('/(tabs)/profile' as any)}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="person-outline" size={24} color={AppColors.primary} />
-            <Text style={styles.quickLabel}>Profilim</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Yeni Liste */}
+      <TouchableOpacity
+        style={styles.quickCard}
+        onPress={() => router.push('/create-list')}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="add-circle-outline" size={24} color={AppColors.primary} />
+        <Text style={styles.quickLabel}>Yeni Liste</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -212,35 +173,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: AppColors.textSecondary,
   },
-  reviewBtn: {
-    backgroundColor: AppColors.primary,
-    borderRadius: 18,
-    padding: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 28,
-    shadowColor: AppColors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  reviewBtnLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  reviewBtnTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  reviewBtnSub: {
-    color: 'rgba(255,255,255,0.75)',
-    fontSize: 12,
-    marginTop: 2,
-  },
   section: {
     marginBottom: 24,
   },
@@ -286,11 +218,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: AppColors.textSecondary,
     marginTop: 2,
-  },
-  quickRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 10,
   },
   quickCard: {
     flex: 1,

@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.v1.dependencies import get_auth_service, get_current_user
-from app.domain.models.user import User
+from app.domain.models.user import User, UserPreferences
 from app.domain.schemas.auth import (
     ForgotPasswordRequest,
     LoginRequest,
+    PreferencesResponse,
     RefreshRequest,
     RegisterRequest,
     ResetPasswordRequest,
@@ -52,11 +53,17 @@ async def refresh(
 
 @router.get("/me", response_model=UserResponse)
 async def me(current_user: User = Depends(get_current_user)):
+    prefs = current_user.preferences if current_user.preferences is not None else UserPreferences()
     return UserResponse(
         id=str(current_user.id),
         email=current_user.email,
         full_name=current_user.full_name,
         is_active=current_user.is_active,
+        preferences=PreferencesResponse(
+            tts_speed=prefs.tts_speed,
+            tts_accent=prefs.tts_accent,
+            dark_mode=prefs.dark_mode,
+        ),
     )
 
 

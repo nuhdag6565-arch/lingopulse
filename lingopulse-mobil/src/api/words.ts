@@ -18,11 +18,6 @@ export async function fetchWords(listId: string): Promise<ApiWord[]> {
   return data.items;
 }
 
-export async function fetchDueWords(limit = 20): Promise<ApiWord[]> {
-  const { data } = await api.get('/words/due', { params: { limit } });
-  return data;
-}
-
 export async function createWordApi(
   word: string,
   meaning: string,
@@ -39,8 +34,4 @@ export async function deleteWordApi(id: string): Promise<void> {
 export async function fetchAllWords(): Promise<ApiWord[]> {
   const { data } = await api.get('/words/', { params: { size: 200 } });
   return data.items;
-}
-
-export async function submitReviewApi(wordId: string, knewIt: boolean): Promise<void> {
-  await api.post('/reviews/', { word_id: wordId, knew_it: knewIt });
 }

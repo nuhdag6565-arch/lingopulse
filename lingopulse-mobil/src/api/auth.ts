@@ -1,5 +1,12 @@
 import axios from 'axios';
 import { API_BASE_URL } from './config';
+import api from './client';
+
+export interface PreferencesResponse {
+  tts_speed: number;
+  tts_accent: string;
+  dark_mode: boolean;
+}
 
 export interface TokenResponse {
   access_token: string;
@@ -12,6 +19,7 @@ export interface UserResponse {
   email: string;
   full_name: string;
   is_active: boolean;
+  preferences: PreferencesResponse;
 }
 
 const plain = axios.create({ baseURL: API_BASE_URL, timeout: 15000 });
@@ -51,4 +59,25 @@ export async function apiResetPassword(
   newPassword: string,
 ): Promise<void> {
   await plain.post('/auth/reset-password', { email, code, new_password: newPassword });
+}
+
+export async function apiChangePassword(
+  oldPassword: string,
+  newPassword: string,
+): Promise<void> {
+  await api.put('/users/me/password', { old_password: oldPassword, new_password: newPassword });
+}
+
+export async function apiUpdateProfile(fullName: string): Promise<UserResponse> {
+  const { data } = await api.put<UserResponse>('/users/me', { full_name: fullName });
+  return data;
+}
+
+export async function apiUpdatePreferences(prefs: {
+  tts_speed?: number;
+  tts_accent?: string;
+  dark_mode?: boolean;
+}): Promise<UserResponse> {
+  const { data } = await api.put<UserResponse>('/users/me/preferences', prefs);
+  return data;
 }

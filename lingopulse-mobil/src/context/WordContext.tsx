@@ -3,11 +3,9 @@ import { Alert } from 'react-native';
 import { fetchLists, createListApi, deleteListApi, type ApiWordList } from '../api/lists';
 import {
   fetchWords,
-  fetchDueWords,
   fetchAllWords,
   createWordApi,
   deleteWordApi,
-  submitReviewApi,
   type ApiWord,
 } from '../api/words';
 
@@ -45,11 +43,7 @@ interface WordContextType {
   getListWords: (listId: string) => Word[];
   addWord: (word: string, meaning: string, listId: string) => Promise<void>;
   deleteWord: (id: string) => Promise<void>;
-  dueWords: Word[];
-  isLoadingDue: boolean;
-  loadDueWords: () => Promise<Word[]>;
   loadAllWords: () => Promise<Word[]>;
-  reviewWord: (id: string, knew: boolean) => Promise<void>;
   reset: () => void;
 }
 
@@ -83,10 +77,8 @@ function mapWord(w: ApiWord): Word {
 export function WordProvider({ children }: { children: React.ReactNode }) {
   const [lists, setLists] = useState<WordList[]>([]);
   const [listWords, setListWords] = useState<Record<string, Word[]>>({});
-  const [dueWords, setDueWords] = useState<Word[]>([]);
   const [isLoadingLists, setIsLoadingLists] = useState(false);
   const [isLoadingWords, setIsLoadingWords] = useState(false);
-  const [isLoadingDue, setIsLoadingDue] = useState(false);
 
   const loadLists = useCallback(async () => {
     setIsLoadingLists(true);
@@ -116,7 +108,6 @@ export function WordProvider({ children }: { children: React.ReactNode }) {
       delete next[id];
       return next;
     });
-    setDueWords((prev) => prev.filter((w) => w.listId !== id));
   }, []);
 
   const getList = useCallback(
@@ -181,22 +172,6 @@ export function WordProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {
       Alert.alert('Hata', 'Kelime silinirken bir sorun oluştu.');
-      // Reload the list to restore accurate state
-    }
-  }, []);
-
-  const loadDueWords = useCallback(async (): Promise<Word[]> => {
-    setIsLoadingDue(true);
-    try {
-      const data = await fetchDueWords();
-      const mapped = data.map(mapWord);
-      setDueWords(mapped);
-      return mapped;
-    } catch {
-      Alert.alert('Hata', 'Tekrar edilecek kelimeler yüklenemedi.');
-      return [];
-    } finally {
-      setIsLoadingDue(false);
     }
   }, []);
 
@@ -210,15 +185,9 @@ export function WordProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const reviewWord = useCallback(async (id: string, knew: boolean) => {
-    await submitReviewApi(id, knew);
-    setDueWords((prev) => prev.filter((w) => w.id !== id));
-  }, []);
-
   const reset = useCallback(() => {
     setLists([]);
     setListWords({});
-    setDueWords([]);
   }, []);
 
   return (
@@ -236,11 +205,7 @@ export function WordProvider({ children }: { children: React.ReactNode }) {
         getListWords,
         addWord,
         deleteWord,
-        dueWords,
-        isLoadingDue,
-        loadDueWords,
         loadAllWords,
-        reviewWord,
         reset,
       }}
     >
