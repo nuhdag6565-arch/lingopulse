@@ -9,6 +9,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/src/context/AuthContext';
 import { WordProvider } from '@/src/context/WordContext';
 import { TTSProvider, useTTS } from '@/src/context/TTSContext';
+import { ThemeColorsProvider } from '@/src/context/ThemeContext';
 
 // Maps a numeric speed to the exact string used in SPEED_OPTIONS chips
 const SPEED_STRS = ['0.25', '0.5', '0.75', '1.0', '1.25', '1.5', '1.75', '2.0'];
@@ -33,20 +34,22 @@ function AppContent() {
   const isDark = user?.preferences?.darkMode ?? systemScheme === 'dark';
 
   return (
-    <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="create-list" options={{ presentation: 'modal', headerShown: false }} />
-        <Stack.Screen name="add-word" options={{ presentation: 'modal', headerShown: false }} />
-        <Stack.Screen name="list/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="study/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="settings" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-    </ThemeProvider>
+    <ThemeColorsProvider isDark={isDark}>
+      <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
+        <Stack>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="create-list" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="add-word" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="list/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="study/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="settings" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        </Stack>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+      </ThemeProvider>
+    </ThemeColorsProvider>
   );
 }
 

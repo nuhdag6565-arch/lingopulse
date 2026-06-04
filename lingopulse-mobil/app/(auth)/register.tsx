@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -14,10 +14,44 @@ import {
 import { Link, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/context/AuthContext';
-import { AppColors } from '@/src/constants/colors';
+import { useAppColors, type AppColorsType } from '@/src/context/ThemeContext';
+
+const createStyles = (c: AppColorsType) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 40 },
+  header: { alignItems: 'center', marginBottom: 36 },
+  logo: { fontSize: 32, fontWeight: '800', color: c.primary, letterSpacing: -0.5, marginBottom: 6 },
+  subtitle: { fontSize: 16, color: c.textSecondary },
+  form: { gap: 16 },
+  inputGroup: { gap: 6 },
+  label: { fontSize: 14, fontWeight: '600', color: c.textPrimary },
+  input: {
+    backgroundColor: c.surface, borderWidth: 1.5, borderColor: c.border,
+    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
+    fontSize: 15, color: c.textPrimary,
+  },
+  passwordRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: c.surface, borderWidth: 1.5, borderColor: c.border, borderRadius: 12,
+  },
+  passwordRowError: { borderColor: c.error },
+  passwordInput: { flex: 1, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: c.textPrimary },
+  eyeBtn: { paddingHorizontal: 14, paddingVertical: 14 },
+  passwordHints: { gap: 3, paddingTop: 2 },
+  hintItem: { fontSize: 12, color: c.textMuted },
+  errorText: { fontSize: 12, color: c.error, marginTop: 2 },
+  button: { backgroundColor: c.primary, borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
+  buttonDisabled: { opacity: 0.6 },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 32 },
+  footerText: { fontSize: 15, color: c.textSecondary },
+  link: { fontSize: 15, fontWeight: '700', color: c.primary },
+});
 
 export default function RegisterScreen() {
   const { register } = useAuth();
+  const c = useAppColors();
+  const styles = useMemo(() => createStyles(c), [c]);
 
   const fullNameRef = useRef('');
   const emailRef = useRef('');
@@ -75,15 +109,8 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.logo}>LingoPulse</Text>
           <Text style={styles.subtitle}>Hesap oluştur</Text>
@@ -95,7 +122,7 @@ export default function RegisterScreen() {
             <TextInput
               style={styles.input}
               placeholder="Adınız Soyadınız"
-              placeholderTextColor={AppColors.textMuted}
+              placeholderTextColor={c.textMuted}
               onChangeText={(t) => { fullNameRef.current = t; }}
               autoCapitalize="none"
               spellCheck={false}
@@ -108,7 +135,7 @@ export default function RegisterScreen() {
               ref={emailInputRef}
               style={styles.input}
               placeholder="ornek@email.com"
-              placeholderTextColor={AppColors.textMuted}
+              placeholderTextColor={c.textMuted}
               onChangeText={(t) => { emailRef.current = t; }}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -125,26 +152,15 @@ export default function RegisterScreen() {
                 ref={passwordInputRef}
                 style={styles.passwordInput}
                 placeholder="En az 8 karakter"
-                placeholderTextColor={AppColors.textMuted}
-                onChangeText={(t) => {
-                  passwordRef.current = t;
-                  if (mismatch) setMismatch(false);
-                }}
+                placeholderTextColor={c.textMuted}
+                onChangeText={(t) => { passwordRef.current = t; if (mismatch) setMismatch(false); }}
                 secureTextEntry={!showPassword}
                 returnKeyType="next"
                 onSubmitEditing={() => confirmInputRef.current?.focus()}
                 submitBehavior="submit"
               />
-              <TouchableOpacity
-                style={styles.eyeBtn}
-                onPress={() => setShowPassword((v) => !v)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={22}
-                  color={AppColors.textMuted}
-                />
+              <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword((v) => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color={c.textMuted} />
               </TouchableOpacity>
             </View>
             <View style={styles.passwordHints}>
@@ -160,43 +176,21 @@ export default function RegisterScreen() {
                 ref={confirmInputRef}
                 style={styles.passwordInput}
                 placeholder="Şifrenizi tekrar girin"
-                placeholderTextColor={AppColors.textMuted}
-                onChangeText={(t) => {
-                  confirmRef.current = t;
-                  setMismatch(t.length > 0 && t !== passwordRef.current);
-                }}
+                placeholderTextColor={c.textMuted}
+                onChangeText={(t) => { confirmRef.current = t; setMismatch(t.length > 0 && t !== passwordRef.current); }}
                 secureTextEntry={!showConfirm}
                 returnKeyType="done"
                 onSubmitEditing={handleRegister}
               />
-              <TouchableOpacity
-                style={styles.eyeBtn}
-                onPress={() => setShowConfirm((v) => !v)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons
-                  name={showConfirm ? 'eye-off-outline' : 'eye-outline'}
-                  size={22}
-                  color={AppColors.textMuted}
-                />
+              <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowConfirm((v) => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={22} color={c.textMuted} />
               </TouchableOpacity>
             </View>
-            {mismatch && (
-              <Text style={styles.errorText}>Şifreler eşleşmiyor</Text>
-            )}
+            {mismatch && <Text style={styles.errorText}>Şifreler eşleşmiyor</Text>}
           </View>
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleRegister}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Kayıt Ol</Text>
-            )}
+          <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleRegister} disabled={loading} activeOpacity={0.85}>
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Kayıt Ol</Text>}
           </TouchableOpacity>
         </View>
 
@@ -212,119 +206,3 @@ export default function RegisterScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: AppColors.background,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-    paddingVertical: 40,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 36,
-  },
-  logo: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: AppColors.primary,
-    letterSpacing: -0.5,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: AppColors.textSecondary,
-  },
-  form: {
-    gap: 16,
-  },
-  inputGroup: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: AppColors.textPrimary,
-  },
-  input: {
-    backgroundColor: AppColors.surface,
-    borderWidth: 1.5,
-    borderColor: AppColors.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: AppColors.textPrimary,
-  },
-  passwordRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: AppColors.surface,
-    borderWidth: 1.5,
-    borderColor: AppColors.border,
-    borderRadius: 12,
-  },
-  passwordRowError: {
-    borderColor: AppColors.error,
-  },
-  passwordInput: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: AppColors.textPrimary,
-  },
-  eyeBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  passwordHints: {
-    gap: 3,
-    paddingTop: 2,
-  },
-  hintItem: {
-    fontSize: 12,
-    color: AppColors.textMuted,
-  },
-  inputError: {
-    borderColor: AppColors.error,
-  },
-  errorText: {
-    fontSize: 12,
-    color: AppColors.error,
-    marginTop: 2,
-  },
-  button: {
-    backgroundColor: AppColors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 32,
-  },
-  footerText: {
-    fontSize: 15,
-    color: AppColors.textSecondary,
-  },
-  link: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: AppColors.primary,
-  },
-});

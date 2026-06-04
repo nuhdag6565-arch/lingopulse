@@ -1,23 +1,19 @@
 import { Redirect } from 'expo-router';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { useAuth } from '@/src/context/AuthContext';
-import { AppColors } from '@/src/constants/colors';
+import { useAppColors } from '@/src/context/ThemeContext';
 
 export default function Index() {
   const { isAuthenticated, isLoading } = useAuth();
+  const c = useAppColors();
 
   if (isLoading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={AppColors.primary} />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: c.background }}>
+        <ActivityIndicator size="large" color={c.primary} />
       </View>
     );
   }
 
-  // <Redirect> is render-time — fires after navigator is mounted (safe)
   return <Redirect href={isAuthenticated ? '/(tabs)' : '/(auth)/onboarding'} />;
 }
-
-const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
-});

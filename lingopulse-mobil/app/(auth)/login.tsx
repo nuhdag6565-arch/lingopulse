@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,42 @@ import {
 import { Link, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/context/AuthContext';
-import { AppColors } from '@/src/constants/colors';
+import { useAppColors, type AppColorsType } from '@/src/context/ThemeContext';
+
+const createStyles = (c: AppColorsType) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
+  inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 28 },
+  header: { alignItems: 'center', marginBottom: 40 },
+  logo: { fontSize: 32, fontWeight: '800', color: c.primary, letterSpacing: -0.5, marginBottom: 6 },
+  subtitle: { fontSize: 16, color: c.textSecondary },
+  form: { gap: 16 },
+  inputGroup: { gap: 6 },
+  label: { fontSize: 14, fontWeight: '600', color: c.textPrimary },
+  input: {
+    backgroundColor: c.surface, borderWidth: 1.5, borderColor: c.border,
+    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
+    fontSize: 15, color: c.textPrimary,
+  },
+  passwordRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: c.surface, borderWidth: 1.5, borderColor: c.border, borderRadius: 12,
+  },
+  passwordInput: { flex: 1, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: c.textPrimary },
+  eyeBtn: { paddingHorizontal: 14, paddingVertical: 14 },
+  forgotRow: { alignSelf: 'flex-end', marginTop: -4 },
+  forgotText: { fontSize: 13, fontWeight: '600', color: c.primary },
+  button: { backgroundColor: c.primary, borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 4 },
+  buttonDisabled: { opacity: 0.6 },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 32 },
+  footerText: { fontSize: 15, color: c.textSecondary },
+  link: { fontSize: 15, fontWeight: '700', color: c.primary },
+});
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const c = useAppColors();
+  const styles = useMemo(() => createStyles(c), [c]);
   const emailRef = useRef('');
   const passwordRef = useRef('');
   const passwordInputRef = useRef<TextInput>(null);
@@ -47,10 +79,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.inner}>
         <View style={styles.header}>
           <Text style={styles.logo}>LingoPulse</Text>
@@ -63,7 +92,7 @@ export default function LoginScreen() {
             <TextInput
               style={styles.input}
               placeholder="ornek@email.com"
-              placeholderTextColor={AppColors.textMuted}
+              placeholderTextColor={c.textMuted}
               onChangeText={(t) => { emailRef.current = t; }}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -80,44 +109,24 @@ export default function LoginScreen() {
                 ref={passwordInputRef}
                 style={styles.passwordInput}
                 placeholder="••••••••"
-                placeholderTextColor={AppColors.textMuted}
+                placeholderTextColor={c.textMuted}
                 onChangeText={(t) => { passwordRef.current = t; }}
                 secureTextEntry={!showPassword}
                 returnKeyType="done"
                 onSubmitEditing={handleLogin}
               />
-              <TouchableOpacity
-                style={styles.eyeBtn}
-                onPress={() => setShowPassword((v) => !v)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={22}
-                  color={AppColors.textMuted}
-                />
+              <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword((v) => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color={c.textMuted} />
               </TouchableOpacity>
             </View>
           </View>
 
-          <TouchableOpacity
-            onPress={() => router.push('/(auth)/forgot-password' as never)}
-            style={styles.forgotRow}
-          >
+          <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password' as never)} style={styles.forgotRow}>
             <Text style={styles.forgotText}>Şifremi unuttum</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Giriş Yap</Text>
-            )}
+          <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleLogin} disabled={loading} activeOpacity={0.85}>
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Giriş Yap</Text>}
           </TouchableOpacity>
         </View>
 
@@ -133,108 +142,3 @@ export default function LoginScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: AppColors.background,
-  },
-  inner: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  logo: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: AppColors.primary,
-    letterSpacing: -0.5,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: AppColors.textSecondary,
-  },
-  form: {
-    gap: 16,
-  },
-  inputGroup: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: AppColors.textPrimary,
-  },
-  input: {
-    backgroundColor: AppColors.surface,
-    borderWidth: 1.5,
-    borderColor: AppColors.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: AppColors.textPrimary,
-  },
-  passwordRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: AppColors.surface,
-    borderWidth: 1.5,
-    borderColor: AppColors.border,
-    borderRadius: 12,
-  },
-  passwordInput: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: AppColors.textPrimary,
-  },
-  eyeBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  forgotRow: {
-    alignSelf: 'flex-end',
-    marginTop: -4,
-  },
-  forgotText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: AppColors.primary,
-  },
-  button: {
-    backgroundColor: AppColors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 32,
-  },
-  footerText: {
-    fontSize: 15,
-    color: AppColors.textSecondary,
-  },
-  link: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: AppColors.primary,
-  },
-});

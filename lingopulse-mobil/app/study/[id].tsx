@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useWords, type Word } from '@/src/context/WordContext';
 import { FlashCard } from '@/src/components/FlashCard';
-import { AppColors } from '@/src/constants/colors';
+import { useAppColors, type AppColorsType } from '@/src/context/ThemeContext';
 
 const SCREEN_W = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = 80;
@@ -27,13 +27,8 @@ interface QuizQ {
 }
 
 function buildQuestion(word: Word, allWords: Word[]): QuizQ {
-  const candidates = allWords.filter(
-    (w) => w.id !== word.id && w.meaning !== word.meaning,
-  );
-  const distractor =
-    candidates.length > 0
-      ? candidates[Math.floor(Math.random() * candidates.length)]
-      : null;
+  const candidates = allWords.filter((w) => w.id !== word.id && w.meaning !== word.meaning);
+  const distractor = candidates.length > 0 ? candidates[Math.floor(Math.random() * candidates.length)] : null;
   const correctIdx = Math.random() < 0.5 ? 0 : 1;
   const opts = ['', ''];
   opts[correctIdx] = word.meaning;
@@ -41,19 +36,84 @@ function buildQuestion(word: Word, allWords: Word[]): QuizQ {
   return { word, options: opts, correctIdx };
 }
 
+const createStyles = (c: AppColorsType) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background, paddingTop: 60, paddingHorizontal: 20 },
+  center: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 10 },
+  backBtn: {
+    width: 36, height: 36, borderRadius: 18, backgroundColor: c.surface,
+    borderWidth: 1, borderColor: c.border, alignItems: 'center', justifyContent: 'center',
+  },
+  headerMid: { flex: 1, gap: 1 },
+  headerTitle: { fontSize: 17, fontWeight: '800', color: c.textPrimary },
+  modeLabel: { fontSize: 11, fontWeight: '600', color: c.primary, textTransform: 'uppercase', letterSpacing: 0.5 },
+  counter: { fontSize: 14, fontWeight: '600', color: c.textSecondary },
+  progressTrack: { height: 6, backgroundColor: c.border, borderRadius: 3, marginBottom: 24, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: c.primary, borderRadius: 3 },
+  deckArea: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 20 },
+  ghostCard: { position: 'absolute', width: '100%', borderRadius: 20, overflow: 'hidden' },
+  ghostCard2: { top: 8, transform: [{ scale: 0.96 }], opacity: 0.55 },
+  ghostCard3: { top: 16, transform: [{ scale: 0.92 }], opacity: 0.3 },
+  ghostCardInner: { height: 280, backgroundColor: c.surface, borderRadius: 20, borderWidth: 1.5, borderColor: c.border },
+  topCardWrap: { width: '100%' },
+  actionsArea: { paddingBottom: 36, paddingTop: 8, alignItems: 'center', gap: 10 },
+  flipHintRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  flipHintText: { fontSize: 12, color: c.textMuted, fontWeight: '500' },
+  nextBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: c.primary, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32,
+    shadowColor: c.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.28, shadowRadius: 10, elevation: 5,
+  },
+  nextBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  quizArea: { flex: 1, paddingBottom: 24 },
+  quizWordCard: {
+    backgroundColor: c.surface, borderRadius: 20, borderWidth: 1.5, borderColor: c.border,
+    padding: 28, alignItems: 'center', marginBottom: 24,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+  },
+  quizWordLabel: { fontSize: 11, fontWeight: '700', color: c.primary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 },
+  quizWordText: { fontSize: 28, fontWeight: '800', color: c.textPrimary, textAlign: 'center' },
+  quizPrompt: { fontSize: 14, fontWeight: '600', color: c.textSecondary, textAlign: 'center', marginBottom: 18 },
+  optionsCol: { gap: 12 },
+  optionBtn: {
+    backgroundColor: c.surface, borderRadius: 16, borderWidth: 1.5, borderColor: c.border,
+    paddingVertical: 18, paddingHorizontal: 20, alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
+  },
+  optionBtnText: { fontSize: 16, fontWeight: '600', color: c.textPrimary, textAlign: 'center' },
+  optionCorrect: { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' },
+  optionWrong: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
+  bigEmoji: { fontSize: 64, marginBottom: 16 },
+  centerTitle: { fontSize: 24, fontWeight: '800', color: c.textPrimary, textAlign: 'center', marginBottom: 8 },
+  centerDesc: { fontSize: 15, color: c.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: 32 },
+  statsRow: {
+    flexDirection: 'row', backgroundColor: c.surface, borderRadius: 16,
+    borderWidth: 1, borderColor: c.border, paddingVertical: 16, paddingHorizontal: 8, marginBottom: 28, width: '100%',
+  },
+  statBox: { flex: 1, alignItems: 'center', gap: 4 },
+  statNum: { fontSize: 26, fontWeight: '800', color: c.textPrimary },
+  statLbl: { fontSize: 11, fontWeight: '600', color: c.textSecondary },
+  statDivider: { width: 1, backgroundColor: c.border, marginVertical: 4 },
+  secondaryBtn: {
+    borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32, width: '100%',
+    alignItems: 'center', borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface,
+  },
+  secondaryBtnText: { fontSize: 15, fontWeight: '600', color: c.textSecondary },
+});
+
 export default function StudyScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { getList, loadListWords } = useWords();
+  const c = useAppColors();
+  const styles = useMemo(() => createStyles(c), [c]);
 
   const [loading, setLoading] = useState(true);
   const [sessionMode, setSessionMode] = useState<SessionMode>('review');
 
-  // Review phase
   const [reviewQueue, setReviewQueue] = useState<Word[]>([]);
   const [flipped, setFlipped] = useState(false);
   const reviewTotalRef = useRef(0);
 
-  // Quiz phase
   const [, setQuizQueue] = useState<Word[]>([]);
   const [currentQ, setCurrentQ] = useState<QuizQ | null>(null);
   const [answered, setAnswered] = useState<number | null>(null);
@@ -61,7 +121,6 @@ export default function StudyScreen() {
   const [wrongCount, setWrongCount] = useState(0);
   const quizTotalRef = useRef(0);
 
-  // Refs for stale closures
   const wordsRef = useRef<Word[]>([]);
   const reviewStateRef = useRef<{
     queue: Word[];
@@ -69,7 +128,6 @@ export default function StudyScreen() {
     startQuiz: (words: Word[]) => void;
   }>({ queue: [], flipped: false, startQuiz: () => {} });
 
-  // Animations
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const cardPan = useRef(new Animated.ValueXY()).current;
   const transitioningRef = useRef(false);
@@ -78,13 +136,11 @@ export default function StudyScreen() {
     (fn: () => void) => {
       if (transitioningRef.current) return;
       transitioningRef.current = true;
-      Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start(
-        () => {
-          fn();
-          transitioningRef.current = false;
-          Animated.timing(fadeAnim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
-        },
-      );
+      Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
+        fn();
+        transitioningRef.current = false;
+        Animated.timing(fadeAnim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+      });
     },
     [fadeAnim],
   );
@@ -106,9 +162,7 @@ export default function StudyScreen() {
   const advanceReview = useCallback(() => {
     if (transitioningRef.current) return;
     const { queue, startQuiz: doStartQuiz } = reviewStateRef.current;
-
     cardPan.setValue({ x: 0, y: 0 });
-
     crossfade(() => {
       if (queue.length === 0) {
         doStartQuiz(wordsRef.current);
@@ -119,25 +173,15 @@ export default function StudyScreen() {
     });
   }, [cardPan, crossfade]);
 
-  // PanResponder — created once, reads from ref for fresh data
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 10,
-      onPanResponderMove: Animated.event([null, { dx: cardPan.x }], {
-        useNativeDriver: false,
-      }),
+      onPanResponderMove: Animated.event([null, { dx: cardPan.x }], { useNativeDriver: false }),
       onPanResponderRelease: (_, g) => {
         if (Math.abs(g.dx) > SWIPE_THRESHOLD || Math.abs(g.vx) > 0.8) {
           const dir = g.dx > 0 ? 1 : -1;
-          Animated.timing(cardPan, {
-            toValue: { x: dir * SCREEN_W * 1.4, y: 0 },
-            duration: 220,
-            useNativeDriver: false,
-          }).start(() => {
-            // advanceReview reads reviewStateRef internally via closure chain
-            // but we need to call the stable function — stored in ref
-            reviewStateRef.current.startQuiz; // keep ref alive
+          Animated.timing(cardPan, { toValue: { x: dir * SCREEN_W * 1.4, y: 0 }, duration: 220, useNativeDriver: false }).start(() => {
             const { queue, startQuiz: doStartQuiz } = reviewStateRef.current;
             cardPan.setValue({ x: 0, y: 0 });
             if (queue.length === 0) {
@@ -148,28 +192,19 @@ export default function StudyScreen() {
             }
           });
         } else {
-          Animated.spring(cardPan, {
-            toValue: { x: 0, y: 0 },
-            useNativeDriver: false,
-          }).start();
+          Animated.spring(cardPan, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
         }
       },
     }),
   ).current;
 
-  // Keep ref fresh every render
-  reviewStateRef.current = {
-    queue: reviewQueue,
-    flipped,
-    startQuiz,
-  };
+  reviewStateRef.current = { queue: reviewQueue, flipped, startQuiz };
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       setLoading(true);
       if (!id) return;
-
       loadListWords(id).then((words) => {
         if (!active) return;
         wordsRef.current = words;
@@ -181,10 +216,7 @@ export default function StudyScreen() {
         setLoading(false);
         cardPan.setValue({ x: 0, y: 0 });
       });
-
-      return () => {
-        active = false;
-      };
+      return () => { active = false; };
     }, [id, loadListWords, cardPan]),
   );
 
@@ -193,8 +225,8 @@ export default function StudyScreen() {
       if (answered !== null || !currentQ) return;
       const isCorrect = idx === currentQ.correctIdx;
       setAnswered(idx);
-      if (isCorrect) setCorrectCount((c) => c + 1);
-      else setWrongCount((w) => w + 1);
+      if (isCorrect) setCorrectCount((prev) => prev + 1);
+      else setWrongCount((prev) => prev + 1);
       setTimeout(() => {
         setQuizQueue((prev) => {
           const next = isCorrect ? prev.slice(1) : [...prev.slice(1), prev[0]];
@@ -215,7 +247,6 @@ export default function StudyScreen() {
   const reviewTotal = reviewTotalRef.current;
   const reviewDone = reviewTotal - reviewQueue.length;
   const reviewProgress = reviewTotal > 0 ? reviewDone / reviewTotal : 0;
-
   const quizTotal = quizTotalRef.current;
   const quizDone = correctCount + wrongCount;
   const quizProgress = quizTotal > 0 ? correctCount / quizTotal : 0;
@@ -226,16 +257,14 @@ export default function StudyScreen() {
     extrapolate: 'clamp',
   });
 
-  // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color={AppColors.primary} />
+        <ActivityIndicator size="large" color={c.primary} />
       </View>
     );
   }
 
-  // ── Empty ──────────────────────────────────────────────────────────────────
   if (!loading && reviewQueue.length === 0 && sessionMode === 'review' && reviewTotal === 0) {
     return (
       <View style={[styles.container, styles.center]}>
@@ -249,7 +278,6 @@ export default function StudyScreen() {
     );
   }
 
-  // ── Finished ───────────────────────────────────────────────────────────────
   if (sessionMode === 'finished') {
     return (
       <Animated.View style={[styles.container, styles.center, { opacity: fadeAnim }]}>
@@ -281,18 +309,13 @@ export default function StudyScreen() {
     );
   }
 
-  // ── Quiz mode ──────────────────────────────────────────────────────────────
   if (sessionMode === 'quiz') {
     const q = currentQ;
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => router.back()}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="arrow-back" size={22} color={AppColors.textPrimary} />
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="arrow-back" size={22} color={c.textPrimary} />
           </TouchableOpacity>
           <View style={styles.headerMid}>
             <Text style={styles.headerTitle} numberOfLines={1}>{list?.name ?? 'Quiz'}</Text>
@@ -312,32 +335,22 @@ export default function StudyScreen() {
                 <Text style={styles.quizWordLabel}>İngilizce</Text>
                 <Text style={styles.quizWordText}>{q.word.word}</Text>
               </View>
-
               <Text style={styles.quizPrompt}>Türkçe anlamı nedir?</Text>
-
               <View style={styles.optionsCol}>
                 {q.options.map((opt, idx) => {
-                  let btnStyle = styles.optionBtn;
-                  let txtStyle = styles.optionBtnText;
-
+                  let btnStyle: any = styles.optionBtn;
+                  let txtStyle: any = styles.optionBtnText;
                   if (answered !== null) {
                     if (idx === q.correctIdx) {
-                      btnStyle = { ...styles.optionBtn, ...styles.optionCorrect } as any;
-                      txtStyle = { ...styles.optionBtnText, color: '#059669' } as any;
+                      btnStyle = { ...styles.optionBtn, ...styles.optionCorrect };
+                      txtStyle = { ...styles.optionBtnText, color: '#059669' };
                     } else if (idx === answered && answered !== q.correctIdx) {
-                      btnStyle = { ...styles.optionBtn, ...styles.optionWrong } as any;
-                      txtStyle = { ...styles.optionBtnText, color: '#DC2626' } as any;
+                      btnStyle = { ...styles.optionBtn, ...styles.optionWrong };
+                      txtStyle = { ...styles.optionBtnText, color: '#DC2626' };
                     }
                   }
-
                   return (
-                    <TouchableOpacity
-                      key={idx}
-                      style={btnStyle}
-                      onPress={() => handleAnswer(idx)}
-                      disabled={answered !== null}
-                      activeOpacity={0.82}
-                    >
+                    <TouchableOpacity key={idx} style={btnStyle} onPress={() => handleAnswer(idx)} disabled={answered !== null} activeOpacity={0.82}>
                       <Text style={txtStyle}>{opt}</Text>
                     </TouchableOpacity>
                   );
@@ -350,7 +363,6 @@ export default function StudyScreen() {
     );
   }
 
-  // ── Review mode ────────────────────────────────────────────────────────────
   const topWord = reviewQueue[0];
   const secondWord = reviewQueue[1];
   const thirdWord = reviewQueue[2];
@@ -358,12 +370,8 @@ export default function StudyScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="arrow-back" size={22} color={AppColors.textPrimary} />
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="arrow-back" size={22} color={c.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerMid}>
           <Text style={styles.headerTitle} numberOfLines={1}>{list?.name ?? 'Çalışma'}</Text>
@@ -377,7 +385,6 @@ export default function StudyScreen() {
       </View>
 
       <Animated.View style={[styles.deckArea, { opacity: fadeAnim }]}>
-        {/* Ghost cards behind (depth effect) */}
         {thirdWord && (
           <View style={[styles.ghostCard, styles.ghostCard3]} pointerEvents="none">
             <View style={styles.ghostCardInner} />
@@ -388,41 +395,22 @@ export default function StudyScreen() {
             <View style={styles.ghostCardInner} />
           </View>
         )}
-
-        {/* Top card — swipeable */}
         {topWord && (
           <Animated.View
-            style={[
-              styles.topCardWrap,
-              {
-                transform: [
-                  { translateX: cardPan.x },
-                  { rotate: cardRotate },
-                ],
-              },
-            ]}
+            style={[styles.topCardWrap, { transform: [{ translateX: cardPan.x }, { rotate: cardRotate }] }]}
             {...panResponder.panHandlers}
           >
-            <FlashCard
-              key={topWord.id}
-              word={topWord}
-              revealed={flipped}
-              onFlip={() => setFlipped((f) => !f)}
-            />
+            <FlashCard key={topWord.id} word={topWord} revealed={flipped} onFlip={() => setFlipped((f) => !f)} />
           </Animated.View>
         )}
       </Animated.View>
 
       <View style={styles.actionsArea}>
         <View style={styles.flipHintRow}>
-          <Ionicons name="swap-horizontal-outline" size={14} color={AppColors.textMuted} />
+          <Ionicons name="swap-horizontal-outline" size={14} color={c.textMuted} />
           <Text style={styles.flipHintText}>Kaydır veya</Text>
         </View>
-        <TouchableOpacity
-          style={styles.nextBtn}
-          onPress={advanceReview}
-          activeOpacity={0.85}
-        >
+        <TouchableOpacity style={styles.nextBtn} onPress={advanceReview} activeOpacity={0.85}>
           <Text style={styles.nextBtnText}>Sonraki</Text>
           <Ionicons name="arrow-forward" size={18} color="#fff" />
         </TouchableOpacity>
@@ -430,276 +418,3 @@ export default function StudyScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: AppColors.background,
-    paddingTop: 60,
-    paddingHorizontal: 20,
-  },
-  center: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-    gap: 10,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: AppColors.surface,
-    borderWidth: 1,
-    borderColor: AppColors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerMid: {
-    flex: 1,
-    gap: 1,
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: AppColors.textPrimary,
-  },
-  modeLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: AppColors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  counter: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: AppColors.textSecondary,
-  },
-
-  progressTrack: {
-    height: 6,
-    backgroundColor: AppColors.border,
-    borderRadius: 3,
-    marginBottom: 24,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: AppColors.primary,
-    borderRadius: 3,
-  },
-
-  // ── Review deck ──────────────────────────────────────────────────────────
-  deckArea: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingBottom: 20,
-  },
-  ghostCard: {
-    position: 'absolute',
-    width: '100%',
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  ghostCard2: {
-    top: 8,
-    transform: [{ scale: 0.96 }],
-    opacity: 0.55,
-  },
-  ghostCard3: {
-    top: 16,
-    transform: [{ scale: 0.92 }],
-    opacity: 0.3,
-  },
-  ghostCardInner: {
-    height: 280,
-    backgroundColor: AppColors.surface,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: AppColors.border,
-  },
-  topCardWrap: {
-    width: '100%',
-  },
-
-  actionsArea: {
-    paddingBottom: 36,
-    paddingTop: 8,
-    alignItems: 'center',
-    gap: 10,
-  },
-  flipHintRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  flipHintText: {
-    fontSize: 12,
-    color: AppColors.textMuted,
-    fontWeight: '500',
-  },
-  nextBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: AppColors.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    shadowColor: AppColors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.28,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  nextBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-
-  // ── Quiz ────────────────────────────────────────────────────────────────
-  quizArea: {
-    flex: 1,
-    paddingBottom: 24,
-  },
-  quizWordCard: {
-    backgroundColor: AppColors.surface,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: AppColors.border,
-    padding: 28,
-    alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  quizWordLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: AppColors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 10,
-  },
-  quizWordText: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: AppColors.textPrimary,
-    textAlign: 'center',
-  },
-  quizPrompt: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: AppColors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 18,
-  },
-  optionsCol: {
-    gap: 12,
-  },
-  optionBtn: {
-    backgroundColor: AppColors.surface,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: AppColors.border,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  optionBtnText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: AppColors.textPrimary,
-    textAlign: 'center',
-  },
-  optionCorrect: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#BBF7D0',
-  },
-  optionWrong: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-  },
-
-  // ── Shared: finished / empty ────────────────────────────────────────────
-  bigEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  centerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: AppColors.textPrimary,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  centerDesc: {
-    fontSize: 15,
-    color: AppColors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 32,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    backgroundColor: AppColors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: AppColors.border,
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    marginBottom: 28,
-    width: '100%',
-  },
-  statBox: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-  },
-  statNum: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: AppColors.textPrimary,
-  },
-  statLbl: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: AppColors.textSecondary,
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: AppColors.border,
-    marginVertical: 4,
-  },
-  secondaryBtn: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    width: '100%',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: AppColors.border,
-    backgroundColor: AppColors.surface,
-  },
-  secondaryBtnText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: AppColors.textSecondary,
-  },
-});

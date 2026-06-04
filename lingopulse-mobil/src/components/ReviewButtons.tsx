@@ -1,5 +1,6 @@
+import { useMemo } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
-import { AppColors } from '@/src/constants/colors';
+import { useAppColors, type AppColorsType } from '@/src/context/ThemeContext';
 
 interface Props {
   revealed: boolean;
@@ -9,13 +10,24 @@ interface Props {
   onContinue: () => void;
 }
 
+const createStyles = (c: AppColorsType) => StyleSheet.create({
+  loadingRow: { height: 60, alignItems: 'center', justifyContent: 'center' },
+  row: { flexDirection: 'row', gap: 12 },
+  btn: { flex: 1, paddingVertical: 16, borderRadius: 14, alignItems: 'center' },
+  noBtn: { backgroundColor: '#FEE2E2' },
+  yesBtn: { backgroundColor: '#D1FAE5' },
+  noText: { fontSize: 15, fontWeight: '700', color: '#DC2626' },
+  yesText: { fontSize: 15, fontWeight: '700', color: '#059669' },
+  continueBtn: { backgroundColor: c.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  continueBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+});
+
 export function ReviewButtons({ revealed, loading, onKnew, onDidNotKnow, onContinue }: Props) {
+  const c = useAppColors();
+  const styles = useMemo(() => createStyles(c), [c]);
+
   if (loading) {
-    return (
-      <View style={styles.loadingRow}>
-        <ActivityIndicator color={AppColors.primary} />
-      </View>
-    );
+    return <View style={styles.loadingRow}><ActivityIndicator color={c.primary} /></View>;
   }
 
   if (revealed) {
@@ -37,48 +49,3 @@ export function ReviewButtons({ revealed, loading, onKnew, onDidNotKnow, onConti
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  loadingRow: {
-    height: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  btn: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  noBtn: {
-    backgroundColor: '#FEE2E2',
-  },
-  yesBtn: {
-    backgroundColor: '#D1FAE5',
-  },
-  noText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#DC2626',
-  },
-  yesText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#059669',
-  },
-  continueBtn: {
-    backgroundColor: AppColors.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  continueBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-});
