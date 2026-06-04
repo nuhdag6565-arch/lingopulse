@@ -61,6 +61,17 @@ export async function apiResetPassword(
   await plain.post('/auth/reset-password', { email, code, new_password: newPassword });
 }
 
+export async function apiVerifyFirebaseToken(
+  idToken: string,
+  fullName?: string,
+): Promise<TokenResponse> {
+  const { data } = await plain.post('/auth/verify-token', {
+    id_token: idToken,
+    full_name: fullName ?? '',
+  });
+  return data;
+}
+
 export async function apiChangePassword(
   oldPassword: string,
   newPassword: string,
