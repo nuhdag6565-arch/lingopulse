@@ -1,0 +1,16 @@
+# Veritabanı ve Backend Dosyaları
+
+\*.mongodb.js
+backend/
+api/
+
+# Gereksiz Sistem Dosyaları
+
+node_modules/
+.expo/
+android/
+ios/
+
+# Ortam Değişkenleri
+
+.env

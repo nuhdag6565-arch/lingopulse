@@ -5,6 +5,7 @@ import string
 from datetime import datetime, timezone
 
 from jose import JWTError
+from app.core.firebase_admin_init import init_firebase, is_firebase_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ class AuthService:
 
     async def login(self, email: str, password: str) -> TokenResponse:
         user = await User.find_one(User.email == email)
-        if not user or not verify_password(password, user.hashed_password):
+        if not user or not user.hashed_password or not verify_password(password, user.hashed_password):
             raise ValueError("E-posta veya şifre hatalı.")
         if not user.is_active:
             raise ValueError("Hesap devre dışı.")
@@ -91,11 +92,37 @@ class AuthService:
         code = _generate_code()
         await PasswordResetCode(email=email, code=code).save()
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             await loop.run_in_executor(None, send_reset_email, email, code)
         except Exception as exc:
             # E-posta gönderilemese de kod kaydedildi; loglayıp devam et
             logger.error("Sıfırlama e-postası gönderilemedi (%s): %s", email, exc)
+
+    async def verify_firebase_token(self, id_token: str, full_name: str = "") -> TokenResponse:
+        init_firebase()
+        if not is_firebase_enabled():
+            raise ValueError("Firebase Auth yapılandırılmamış.")
+        from firebase_admin import auth as firebase_auth
+        try:
+            decoded = firebase_auth.verify_id_token(id_token)
+        except Exception as exc:
+            raise ValueError(f"Geçersiz Firebase token: {exc}")
+        email = decoded.get("email")
+        if not email:
+            raise ValueError("Firebase token'da e-posta bulunamadı.")
+        user = await User.find_one(User.email == email)
+        if not user:
+            user = User(
+                email=email,
+                full_name=full_name or decoded.get("name", ""),
+            )
+            await user.save()
+        user.last_login = datetime.now(timezone.utc)
+        await user.save()
+        return TokenResponse(
+            access_token=create_access_token(str(user.id)),
+            refresh_token=create_refresh_token(str(user.id)),
+        )
 
     async def reset_password(self, email: str, code: str, new_password: str) -> None:
         record = await PasswordResetCode.find_one(

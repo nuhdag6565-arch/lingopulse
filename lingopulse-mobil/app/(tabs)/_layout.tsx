@@ -34,6 +34,7 @@ export default function TabLayout() {
     >
       <Tabs.Screen name="index" options={{ title: 'Ana Sayfa', tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} /> }} />
       <Tabs.Screen name="lists" options={{ title: 'Listelerim', tabBarIcon: ({ color, size }) => <Ionicons name="library" size={size} color={color} /> }} />
+      <Tabs.Screen name="podcast" options={{ title: 'Dinle', tabBarIcon: ({ color, size }) => <Ionicons name="headset" size={size} color={color} /> }} />
       <Tabs.Screen name="profile" options={{ title: 'Profilim', tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} /> }} />
       <Tabs.Screen name="explore" options={{ href: null }} />
     </Tabs>

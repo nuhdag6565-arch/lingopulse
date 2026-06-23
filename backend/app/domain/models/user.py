@@ -16,7 +16,7 @@ class User(Document):
     """Kullanıcı hesabı — şifre hash olarak saklanır, asla plain-text değil."""
 
     email: Annotated[str, Indexed(unique=True)]
-    hashed_password: str
+    hashed_password: str | None = None
     full_name: str = ""
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

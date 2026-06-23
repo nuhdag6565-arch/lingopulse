@@ -35,7 +35,7 @@ async def change_password(
     data: ChangePasswordRequest,
     current_user: User = Depends(get_current_user),
 ):
-    if not verify_password(data.old_password, current_user.hashed_password):
+    if not current_user.hashed_password or not verify_password(data.old_password, current_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Mevcut şifre yanlış.",

@@ -11,6 +11,7 @@ from app.domain.schemas.auth import (
     ResetPasswordRequest,
     TokenResponse,
     UserResponse,
+    VerifyFirebaseTokenRequest,
 )
 from app.services.auth_service import AuthService
 
@@ -65,6 +66,17 @@ async def me(current_user: User = Depends(get_current_user)):
             dark_mode=prefs.dark_mode,
         ),
     )
+
+
+@router.post("/verify-token", response_model=TokenResponse)
+async def verify_firebase_token(
+    data: VerifyFirebaseTokenRequest,
+    svc: AuthService = Depends(get_auth_service),
+):
+    try:
+        return await svc.verify_firebase_token(data.id_token, data.full_name)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
 
 
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
