@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from '@/src/context/AuthContext';
 import { WordProvider } from '@/src/context/WordContext';
 import { TTSProvider, useTTS } from '@/src/context/TTSContext';
 import { ThemeColorsProvider } from '@/src/context/ThemeContext';
+import { NowPlayingProvider } from '@/src/context/NowPlayingContext';
 
 // Maps a numeric speed to the exact string used in SPEED_OPTIONS chips
 const SPEED_STRS = ['0.25', '0.5', '0.75', '1.0', '1.25', '1.5', '1.75', '2.0'];
@@ -56,13 +57,15 @@ function AppContent() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <TTSProvider>
-        <AuthProvider>
-          <WordProvider>
-            <AppContent />
-          </WordProvider>
-        </AuthProvider>
-      </TTSProvider>
+      <NowPlayingProvider>
+        <TTSProvider>
+          <AuthProvider>
+            <WordProvider>
+              <AppContent />
+            </WordProvider>
+          </AuthProvider>
+        </TTSProvider>
+      </NowPlayingProvider>
     </SafeAreaProvider>
   );
 }

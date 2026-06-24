@@ -36,8 +36,13 @@ const createStyles = (c: AppColorsType) => StyleSheet.create({
     borderWidth: 1, borderColor: c.border,
   },
   libraryBtnText: { fontSize: 12, fontWeight: '700', color: c.primary },
-speedRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  speedLabel: { fontSize: 13, fontWeight: '600', color: c.textSecondary, flexShrink: 0 },
+speedToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
+    backgroundColor: c.surface, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 12,
+    borderWidth: 1.5, borderColor: c.border,
+  },
+  speedToggleText: { fontSize: 13, fontWeight: '700', color: c.textSecondary },
+  speedChipsRow: { marginTop: 8 },
   speedChips: { flexDirection: 'row', gap: 6 },
   speedChip: {
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
@@ -67,6 +72,7 @@ export default function ListDetailScreen() {
   const c = useAppColors();
   const styles = useMemo(() => createStyles(c), [c]);
   const [oxfordVisible, setOxfordVisible] = useState(false);
+  const [showSpeed,     setShowSpeed]     = useState(false);
 
   const handleSpeed = useCallback(async (val: string) => {
     setTtsSpeed(val);
@@ -101,24 +107,36 @@ export default function ListDetailScreen() {
 
   const ListHeader = (
     <View style={styles.listHeader}>
-      <View style={styles.speedRow}>
-        <Text style={styles.speedLabel}>Ses Hızı</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.speedChips}>
-          {SPEED_OPTIONS.map((val) => {
-            const active = ttsSpeedValue === val;
-            return (
-              <TouchableOpacity
-                key={val}
-                style={[styles.speedChip, active && styles.speedChipActive]}
-                onPress={() => handleSpeed(val)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.speedChipText, active && styles.speedChipTextActive]}>{val}×</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
+      {/* Ses hızı — kapalı/açık toggle */}
+      <TouchableOpacity
+        style={styles.speedToggle}
+        onPress={() => setShowSpeed(v => !v)}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="speedometer-outline" size={15} color={c.textSecondary} />
+        <Text style={styles.speedToggleText}>Ses Hızı  {ttsSpeedValue}×</Text>
+        <Ionicons name={showSpeed ? 'chevron-up' : 'chevron-down'} size={14} color={c.textSecondary} />
+      </TouchableOpacity>
+
+      {showSpeed && (
+        <View style={styles.speedChipsRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.speedChips}>
+            {SPEED_OPTIONS.map((val) => {
+              const active = ttsSpeedValue === val;
+              return (
+                <TouchableOpacity
+                  key={val}
+                  style={[styles.speedChip, active && styles.speedChipActive]}
+                  onPress={() => { handleSpeed(val); setShowSpeed(false); }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.speedChipText, active && styles.speedChipTextActive]}>{val}×</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       {words.length > 0 && <Text style={styles.sectionLabel}>Kelimeler</Text>}
     </View>

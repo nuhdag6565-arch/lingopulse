@@ -123,7 +123,6 @@ export function WordProvider({ children }: { children: React.ReactNode }) {
       setListWords((prev) => ({ ...prev, [listId]: mapped }));
       return mapped;
     } catch {
-      Alert.alert('Hata', 'Kelimeler yüklenirken bir sorun oluştu.');
       return [];
     } finally {
       setIsLoadingWords(false);
@@ -180,7 +179,6 @@ export function WordProvider({ children }: { children: React.ReactNode }) {
       const data = await fetchAllWords();
       return data.map(mapWord);
     } catch {
-      Alert.alert('Hata', 'Kelimeler yüklenirken bir sorun oluştu.');
       return [];
     }
   }, []);

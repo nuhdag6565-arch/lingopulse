@@ -1,16 +1,17 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-const NOTIF_ID    = 'lp-podcast-player';
-const CHANNEL_ID  = 'lp-player';
-const CATEGORY_ID = 'lp-podcast-ctrl';
+const NOTIF_ID         = 'lp-podcast-player';
+const CHANNEL_ID       = 'lp-player';
+const CATEGORY_PLAYING = 'lp-podcast-playing';
+const CATEGORY_PAUSED  = 'lp-podcast-paused';
 
 export const ACTION_PREV       = 'LP_PREV';
 export const ACTION_PLAY_PAUSE = 'LP_PLAY_PAUSE';
 export const ACTION_NEXT       = 'LP_NEXT';
 export const ACTION_STOP       = 'LP_STOP';
 
-// Uygulama ön plandayken bildirimi sessizce güncelle
+// Uygulama ön plandayken bildirim sessiz — arka planda/kilitliyken görünür
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert:  false,
@@ -28,7 +29,7 @@ export async function initPlayerNotification(): Promise<boolean> {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
       name: 'LingoPulse — Kelime Oynatıcı',
-      importance: Notifications.AndroidImportance.LOW,
+      importance: Notifications.AndroidImportance.HIGH,
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       sound: null,
       showBadge: false,
@@ -36,8 +37,8 @@ export async function initPlayerNotification(): Promise<boolean> {
     });
   }
 
-  // İnteraktif bildirim butonları
-  await Notifications.setNotificationCategoryAsync(CATEGORY_ID, [
+  // Çalıyor — Duraklat butonu göster
+  await Notifications.setNotificationCategoryAsync(CATEGORY_PLAYING, [
     {
       identifier: ACTION_PREV,
       buttonTitle: '⏮  Önceki',
@@ -46,6 +47,30 @@ export async function initPlayerNotification(): Promise<boolean> {
     {
       identifier: ACTION_PLAY_PAUSE,
       buttonTitle: '⏸  Duraklat',
+      options: { opensAppToForeground: false },
+    },
+    {
+      identifier: ACTION_NEXT,
+      buttonTitle: '⏭  Sonraki',
+      options: { opensAppToForeground: false },
+    },
+    {
+      identifier: ACTION_STOP,
+      buttonTitle: '✕  Durdur',
+      options: { opensAppToForeground: false, isDestructive: true },
+    },
+  ]);
+
+  // Duraklatıldı — Oynat butonu göster
+  await Notifications.setNotificationCategoryAsync(CATEGORY_PAUSED, [
+    {
+      identifier: ACTION_PREV,
+      buttonTitle: '⏮  Önceki',
+      options: { opensAppToForeground: false },
+    },
+    {
+      identifier: ACTION_PLAY_PAUSE,
+      buttonTitle: '▶  Oynat',
       options: { opensAppToForeground: false },
     },
     {
@@ -73,26 +98,32 @@ export interface PlayerNotifParams {
 }
 
 export async function updatePlayerNotification(p: PlayerNotifParams): Promise<void> {
-  const progress = `${p.index + 1} / ${p.total}`;
+  const progress  = `${p.index + 1} / ${p.total}`;
+  const category  = p.isPlaying ? CATEGORY_PLAYING : CATEGORY_PAUSED;
+  const statusStr = p.isPlaying ? '▶ Çalıyor' : '⏸ Duraklatıldı';
 
   await Notifications.scheduleNotificationAsync({
     identifier: NOTIF_ID,
     content: {
-      title: p.word,
+      title: `🎧 ${p.word}`,
       body: Platform.OS === 'ios'
-        ? p.meaning
-        : `${p.meaning}\n${p.listName}  ·  ${progress}`,
+        ? `${p.meaning}  —  ${statusStr}`
+        : `${p.meaning}\n${p.listName}  ·  ${progress}  ·  ${statusStr}`,
       ...(Platform.OS === 'ios' && {
         subtitle: `${p.listName}  ·  ${progress}`,
       }),
-      categoryIdentifier: CATEGORY_ID,
+      categoryIdentifier: category,
       data: { action: 'playback' },
       sound: false,
+      // Android: silinemez bildirim — kilitleme ekranında kalır
+      ...(Platform.OS === 'android' && {
+        sticky: true,
+      }),
     },
     trigger: null,
   });
 }
 
 export async function dismissPlayerNotification(): Promise<void> {
-  await Notifications.dismissNotificationAsync(NOTIF_ID);
+  await Notifications.dismissNotificationAsync(NOTIF_ID).catch(() => {});
 }
