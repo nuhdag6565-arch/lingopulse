@@ -24,6 +24,8 @@ const SPEED_OPTIONS = [
   { label: '1.75x', value: '1.75' },
   { label: '2x',    value: '2.0'  },
 ];
+
+const REPEAT_OPTIONS = [1, 2, 3, 4, 5];
 import * as Speech from 'expo-speech';
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import * as Notifications from 'expo-notifications';
@@ -239,6 +241,27 @@ const createStyles = (c: AppColorsType) =>
     speedBtnText:       { fontSize: 12, fontWeight: '700', color: `${W}0.7)` },
     speedBtnTextActive: { color: c.primary },
 
+    // ─── Tekrar seçici (açılır/kapanır) ───
+    repeatToggleBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 12,
+      backgroundColor: `${W}0.14)`,
+    },
+    repeatToggleText:    { fontSize: 13, fontWeight: '700', color: '#fff' },
+    repeatExpandedRow:   { marginBottom: 4, marginTop: 8, flexDirection: 'row', justifyContent: 'center', gap: 6 },
+    repeatBtn:           { paddingHorizontal: 14, paddingVertical: 5, borderRadius: 10, backgroundColor: `${W}0.14)` },
+    repeatBtnActive:     { backgroundColor: '#fff' },
+    repeatBtnText:       { fontSize: 12, fontWeight: '700', color: `${W}0.7)` },
+    repeatBtnTextActive: { color: c.primary },
+    repeatIndicator: {
+      textAlign: 'center', fontSize: 11, fontWeight: '700',
+      color: 'rgba(255,255,255,0.45)', letterSpacing: 1, marginBottom: 10,
+    },
+
     // ─── Listeler FAB (oynatıcı içinde sağ alt) ───
     playerListsFab: {
       width: 44,
@@ -317,12 +340,16 @@ export default function PodcastScreen() {
   const [phase,             setPhase]             = useState<'word' | 'meaning'>('word');
   const [loadingListId,     setLoadingListId]     = useState<string | null>(null);
   const [showListSheet,     setShowListSheet]     = useState(false);
-  const [showSpeedSelector, setShowSpeedSelector] = useState(false);
+  const [showSpeedSelector,  setShowSpeedSelector]  = useState(false);
+  const [showRepeatSelector, setShowRepeatSelector] = useState(false);
+  const [repeatCount,        setRepeatCount]        = useState(1);
+  const [currentRepeat,      setCurrentRepeat]      = useState(1);
 
   const cycleActive     = useRef(false);
   const currentIndexRef = useRef(0);
   const playingWordsRef = useRef<Word[]>([]);
   const ttsRateRef      = useRef(ttsRate);
+  const repeatCountRef  = useRef(1);
   const timerRef        = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handlersRef     = useRef({ togglePlayPause: () => {}, skipNextWord: () => {}, skipPrevWord: () => {}, stop: () => {} });
   const autoNextListRef = useRef<() => void>(() => {});
@@ -368,6 +395,7 @@ export default function PodcastScreen() {
   }, [phase, isPlaying]);
 
   useEffect(() => { ttsRateRef.current = ttsRate; }, [ttsRate]);
+  useEffect(() => { repeatCountRef.current = repeatCount; }, [repeatCount]);
 
   useEffect(() => {
     Audio.setAudioModeAsync({
@@ -409,7 +437,7 @@ export default function PodcastScreen() {
     loadLists();
   }, [loadLists]));
 
-  const speakCycle = useCallback((index: number) => {
+  const speakCycle = useCallback((index: number, repeatLeft?: number) => {
     if (!cycleActive.current) return;
     const words = playingWordsRef.current;
     if (index >= words.length) {
@@ -420,9 +448,11 @@ export default function PodcastScreen() {
       return;
     }
 
-    const w = words[index];
+    const w     = words[index];
+    const rLeft = repeatLeft ?? repeatCountRef.current;
     setCurrentIndex(index);
     currentIndexRef.current = index;
+    setCurrentRepeat(repeatCountRef.current - rLeft + 1);
     setPhase('word');
 
     Speech.speak(w.word, {
@@ -438,7 +468,11 @@ export default function PodcastScreen() {
             rate: ttsRateRef.current,
             onDone: () => {
               if (!cycleActive.current) return;
-              timerRef.current = setTimeout(() => speakCycle(index + 1), 900);
+              if (rLeft > 1) {
+                timerRef.current = setTimeout(() => speakCycle(index, rLeft - 1), 600);
+              } else {
+                timerRef.current = setTimeout(() => speakCycle(index + 1), 900);
+              }
             },
             onError: () => { if (cycleActive.current) timerRef.current = setTimeout(() => speakCycle(index + 1), 300); },
           });
@@ -797,6 +831,11 @@ export default function PodcastScreen() {
               </View>
             )}
 
+            {/* Tekrar göstergesi */}
+            {repeatCount > 1 && currentWord && (
+              <Text style={styles.repeatIndicator}>{currentRepeat} / {repeatCount}</Text>
+            )}
+
             {/* İlerleme çubuğu */}
             <View style={styles.playerProgressTrack}>
               <View style={[styles.playerProgressFill, { width: `${Math.round(progress * 100)}%` as any }]} />
@@ -883,11 +922,27 @@ export default function PodcastScreen() {
               </View>
             )}
 
-            {/* Alt satır: Hız toggle + Listeler butonu */}
+            {/* Tekrar seçici — açılınca görünür */}
+            {showRepeatSelector && (
+              <View style={styles.repeatExpandedRow}>
+                {REPEAT_OPTIONS.map((n) => (
+                  <TouchableOpacity
+                    key={n}
+                    style={[styles.repeatBtn, repeatCount === n && styles.repeatBtnActive]}
+                    onPress={() => { setRepeatCount(n); setShowRepeatSelector(false); }}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.repeatBtnText, repeatCount === n && styles.repeatBtnTextActive]}>{n}×</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Alt satır: Hız toggle + Tekrar sayısı + Listeler butonu */}
             <View style={styles.playerBottomRow}>
               <TouchableOpacity
                 style={styles.speedToggleBtn}
-                onPress={() => setShowSpeedSelector(!showSpeedSelector)}
+                onPress={() => { setShowSpeedSelector(!showSpeedSelector); setShowRepeatSelector(false); }}
                 activeOpacity={0.8}
               >
                 <Ionicons name="speedometer-outline" size={14} color="rgba(255,255,255,0.8)" />
@@ -896,6 +951,20 @@ export default function PodcastScreen() {
                 </Text>
                 <Ionicons
                   name={showSpeedSelector ? 'chevron-down' : 'chevron-up'}
+                  size={12}
+                  color="rgba(255,255,255,0.6)"
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.repeatToggleBtn}
+                onPress={() => { setShowRepeatSelector(!showRepeatSelector); setShowSpeedSelector(false); }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="repeat" size={14} color="rgba(255,255,255,0.8)" />
+                <Text style={styles.repeatToggleText}>{repeatCount}×</Text>
+                <Ionicons
+                  name={showRepeatSelector ? 'chevron-down' : 'chevron-up'}
                   size={12}
                   color="rgba(255,255,255,0.6)"
                 />

@@ -1,13 +1,24 @@
 import { useMemo, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator,
+  Modal, Alert, Platform,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
+import Constants from 'expo-constants';
 import { useAuth } from '@/src/context/AuthContext';
 import { useWords } from '@/src/context/WordContext';
 import { useAppColors, type AppColorsType } from '@/src/context/ThemeContext';
+
+const FAQ_ITEMS = [
+  { q: 'Kelime listesi nasıl oluştururum?', a: 'Alt menüden "Listelerim" sekmesine git, sağ üstteki + butonuna bas ve liste adını girerek oluştur.' },
+  { q: 'Podcast modu nedir?', a: 'Kelimelerini otomatik olarak İngilizce→Türkçe sırasıyla sesli okuyan bir dinleme modudur. "Dinle" sekmesinden erişebilirsin.' },
+  { q: 'Tekrar sayısı ne işe yarar?', a: 'Dinleme modunda her kelimenin kaç kez tekrar edileceğini belirler. Oynatıcının alt kısmındaki tekrar butonuyla 1-5 arasında seçebilirsin.' },
+  { q: 'Günlük seri nedir?', a: 'Her gün uygulamayı açtığında serin 1 artar. Bir gün atlayınca sıfırlanır.' },
+  { q: 'Ses hızını nasıl değiştiririm?', a: 'Dinleme ekranında sol alttaki hız butonuna (0.5x, 1x, 1.5x vb.) basarak değiştirebilirsin.' },
+  { q: 'Karanlık mod var mı?', a: 'Evet. Ayarlar → Tercihler → Karanlık Mod bölümünden açabilirsin.' },
+];
 
 const STREAK_DATE_KEY  = 'lp_streak_date';
 const STREAK_COUNT_KEY = 'lp_streak_count';
@@ -149,6 +160,40 @@ const createStyles = (c: AppColorsType) => StyleSheet.create({
 
   version: { textAlign: 'center', fontSize: 12, color: c.textMuted, marginTop: 16, marginBottom: 8 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 32 },
+
+  // Info card (Hakkında)
+  infoCard: {
+    marginHorizontal: 16, marginBottom: 10, borderRadius: 16,
+    backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, overflow: 'hidden',
+  },
+  infoRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 13,
+  },
+  infoRowSep:   { height: 1, backgroundColor: c.border, marginLeft: 16 },
+  infoRowLeft:  { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  infoIconWrap: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  infoLabel:    { fontSize: 14, fontWeight: '600', color: c.textPrimary },
+  infoValue:    { fontSize: 13, color: c.textSecondary, fontWeight: '500' },
+
+  // FAQ modal
+  faqOverlay:   { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
+  faqBackdrop:  { ...StyleSheet.absoluteFillObject },
+  faqSheet: {
+    backgroundColor: c.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingTop: 10, maxHeight: '80%',
+  },
+  faqHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: c.border, alignSelf: 'center', marginBottom: 16 },
+  faqHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, marginBottom: 12,
+  },
+  faqTitle:      { fontSize: 18, fontWeight: '800', color: c.textPrimary },
+  faqContent:    { paddingHorizontal: 20, paddingBottom: 40 },
+  faqItem:       { marginBottom: 16 },
+  faqQ:          { fontSize: 14, fontWeight: '700', color: c.textPrimary, marginBottom: 4 },
+  faqA:          { fontSize: 13, color: c.textSecondary, lineHeight: 19 },
+  faqSep:        { height: 1, backgroundColor: c.border, marginBottom: 16 },
 });
 
 export default function ProfileScreen() {
@@ -159,6 +204,13 @@ export default function ProfileScreen() {
 
   const [streak,     setStreak]     = useState(0);
   const [statsReady, setStatsReady] = useState(false);
+  const [showFaq,    setShowFaq]    = useState(false);
+
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+  const platform   = Platform.OS === 'ios' ? 'iOS' : 'Android';
+  const buildNum   = Platform.OS === 'ios'
+    ? (Constants.expoConfig?.ios?.buildNumber ?? '-')
+    : (Constants.expoConfig?.android?.versionCode?.toString() ?? '-');
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -170,8 +222,6 @@ export default function ProfileScreen() {
 
   const totalWords = lists.reduce((s, l) => s + l.wordCount, 0);
   const initials   = getInitials(user?.fullName);
-
-  const previewLists = lists.slice(0, 3);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -239,43 +289,15 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      {/* Listelerim önizleme */}
-      {previewLists.length > 0 && (
-        <>
-          <View style={styles.sectionRow}>
-            <Text style={styles.sectionTitle}>Listelerim</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/lists')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: c.primary }}>Tümü →</Text>
-            </TouchableOpacity>
-          </View>
-          {previewLists.map((list) => (
-            <TouchableOpacity
-              key={list.id}
-              style={styles.listPreviewCard}
-              onPress={() => router.push(`/list/${list.id}` as any)}
-              activeOpacity={0.85}
-            >
-              <View style={styles.listPreviewLeft}>
-                <View style={styles.listPreviewIcon}>
-                  <Ionicons name="library-outline" size={18} color={c.primary} />
-                </View>
-                <View>
-                  <Text style={styles.listPreviewName} numberOfLines={1}>{list.name}</Text>
-                  <Text style={styles.listPreviewCount}>{list.wordCount} kelime</Text>
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={c.textMuted} />
-            </TouchableOpacity>
-          ))}
-        </>
-      )}
-
-      {/* Ayarlar */}
-      <View style={{ marginTop: 8 }}>
+      {/* Ayarlar & Yardım */}
+      <View style={styles.sectionRow}>
+        <Text style={styles.sectionTitle}>Genel</Text>
+      </View>
+      <View style={{ marginBottom: 4 }}>
         <TouchableOpacity style={styles.settingsCard} onPress={() => router.push('/settings')} activeOpacity={0.85}>
           <View style={styles.settingsLeft}>
-            <View style={styles.settingsIcon}>
-              <Ionicons name="settings-outline" size={18} color={c.textSecondary} />
+            <View style={[styles.settingsIcon, { backgroundColor: '#EEF2FF' }]}>
+              <Ionicons name="settings-outline" size={18} color={c.primary} />
             </View>
             <Text style={styles.settingsText}>Ayarlar</Text>
           </View>
@@ -283,7 +305,149 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.version}>LingoPulse v1.0</Text>
+      {/* Yardım */}
+      <View style={styles.sectionRow}>
+        <Text style={styles.sectionTitle}>Yardım</Text>
+      </View>
+      <View style={styles.infoCard}>
+        <TouchableOpacity style={styles.infoRow} onPress={() => setShowFaq(true)} activeOpacity={0.8}>
+          <View style={styles.infoRowLeft}>
+            <View style={[styles.infoIconWrap, { backgroundColor: '#EEF2FF' }]}>
+              <Ionicons name="help-circle-outline" size={19} color={c.primary} />
+            </View>
+            <Text style={styles.infoLabel}>Sık Sorulan Sorular</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={c.textMuted} />
+        </TouchableOpacity>
+        <View style={styles.infoRowSep} />
+        <TouchableOpacity
+          style={styles.infoRow}
+          onPress={() => Alert.alert('Destek', 'Yardım ve destek için:\nnuhdag.6565@gmail.com\n\nGeri bildirimleriniz bizim için değerlidir.')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.infoRowLeft}>
+            <View style={[styles.infoIconWrap, { backgroundColor: '#F0FDF4' }]}>
+              <Ionicons name="mail-outline" size={19} color="#16A34A" />
+            </View>
+            <Text style={styles.infoLabel}>Destek & İletişim</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={c.textMuted} />
+        </TouchableOpacity>
+        <View style={styles.infoRowSep} />
+        <TouchableOpacity
+          style={styles.infoRow}
+          onPress={() => Alert.alert('Gizlilik Politikası', 'LingoPulse, kişisel verilerinizi yalnızca uygulamanın çalışması için kullanır. Verileriniz üçüncü taraflarla paylaşılmaz ve yalnızca hesabınıza ait sunucularda saklanır.')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.infoRowLeft}>
+            <View style={[styles.infoIconWrap, { backgroundColor: '#FEF3C7' }]}>
+              <Ionicons name="shield-checkmark-outline" size={19} color="#D97706" />
+            </View>
+            <Text style={styles.infoLabel}>Gizlilik Politikası</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={c.textMuted} />
+        </TouchableOpacity>
+        <View style={styles.infoRowSep} />
+        <TouchableOpacity
+          style={styles.infoRow}
+          onPress={() => Alert.alert('Kullanım Koşulları', 'LingoPulse uygulamasını kullanarak bu koşulları kabul etmiş sayılırsınız. Uygulama eğitim amaçlıdır; içerikler değişebilir. Hesabınızı başkalarıyla paylaşmayınız.')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.infoRowLeft}>
+            <View style={[styles.infoIconWrap, { backgroundColor: '#F5F3FF' }]}>
+              <Ionicons name="document-text-outline" size={19} color="#7C3AED" />
+            </View>
+            <Text style={styles.infoLabel}>Kullanım Koşulları</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={c.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Hakkında */}
+      <View style={styles.sectionRow}>
+        <Text style={styles.sectionTitle}>Hakkında</Text>
+      </View>
+      <View style={styles.infoCard}>
+        <View style={styles.infoRow}>
+          <View style={styles.infoRowLeft}>
+            <View style={[styles.infoIconWrap, { backgroundColor: '#EEF2FF' }]}>
+              <Ionicons name="information-circle-outline" size={19} color={c.primary} />
+            </View>
+            <Text style={styles.infoLabel}>Sürüm</Text>
+          </View>
+          <Text style={styles.infoValue}>{appVersion}</Text>
+        </View>
+        <View style={styles.infoRowSep} />
+        <View style={styles.infoRow}>
+          <View style={styles.infoRowLeft}>
+            <View style={[styles.infoIconWrap, { backgroundColor: '#F0FDF4' }]}>
+              <Ionicons name={platform === 'iOS' ? 'logo-apple' : 'logo-android'} size={19} color="#16A34A" />
+            </View>
+            <Text style={styles.infoLabel}>Platform</Text>
+          </View>
+          <Text style={styles.infoValue}>{platform}</Text>
+        </View>
+        <View style={styles.infoRowSep} />
+        <View style={styles.infoRow}>
+          <View style={styles.infoRowLeft}>
+            <View style={[styles.infoIconWrap, { backgroundColor: '#FEF3C7' }]}>
+              <Ionicons name="code-slash-outline" size={19} color="#D97706" />
+            </View>
+            <Text style={styles.infoLabel}>Yapı No</Text>
+          </View>
+          <Text style={styles.infoValue}>{buildNum}</Text>
+        </View>
+        <View style={styles.infoRowSep} />
+        <View style={styles.infoRow}>
+          <View style={styles.infoRowLeft}>
+            <View style={[styles.infoIconWrap, { backgroundColor: '#F5F3FF' }]}>
+              <Ionicons name="person-outline" size={19} color="#7C3AED" />
+            </View>
+            <Text style={styles.infoLabel}>Geliştirici</Text>
+          </View>
+          <Text style={styles.infoValue}>Nuh Dağ</Text>
+        </View>
+        <View style={styles.infoRowSep} />
+        <View style={styles.infoRow}>
+          <View style={styles.infoRowLeft}>
+            <View style={[styles.infoIconWrap, { backgroundColor: '#FFF1F2' }]}>
+              <Ionicons name="heart-outline" size={19} color="#E11D48" />
+            </View>
+            <Text style={styles.infoLabel}>Yapıldığı yer</Text>
+          </View>
+          <Text style={styles.infoValue}>Türkiye 🇹🇷</Text>
+        </View>
+      </View>
+
+      <Text style={styles.version}>LingoPulse v{appVersion} · Tüm hakları saklıdır</Text>
+
+      {/* FAQ Modal */}
+      <Modal visible={showFaq} transparent animationType="slide" onRequestClose={() => setShowFaq(false)}>
+        <View style={styles.faqOverlay}>
+          <TouchableOpacity style={styles.faqBackdrop} activeOpacity={1} onPress={() => setShowFaq(false)} />
+          <View style={styles.faqSheet}>
+            <View style={styles.faqHandle} />
+            <View style={styles.faqHeader}>
+              <Text style={styles.faqTitle}>Sık Sorulan Sorular</Text>
+              <TouchableOpacity onPress={() => setShowFaq(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close" size={22} color={c.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.faqContent} showsVerticalScrollIndicator={false}>
+              {FAQ_ITEMS.map((item, i) => (
+                <View key={i}>
+                  <View style={styles.faqItem}>
+                    <Text style={styles.faqQ}>{item.q}</Text>
+                    <Text style={styles.faqA}>{item.a}</Text>
+                  </View>
+                  {i < FAQ_ITEMS.length - 1 && <View style={styles.faqSep} />}
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
     </ScrollView>
   );
 }
